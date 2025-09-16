@@ -1,0 +1,423 @@
+/* Force styles to be visible - Cache busting */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #000 !important;
+}
+
+.login_page_new_ui {
+  display: flex !important;
+  font-weight: 400;
+  height: 100vh !important;
+  font-family: 'Hellix', sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  position: relative;
+  overflow: hidden;
+  width: 100% !important;
+}
+
+/* Animated background particles */
+.login_page_new_ui::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
+  animation: particleFloat 20s ease-in-out infinite;
+}
+
+@keyframes particleFloat {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(180deg); }
+}
+
+/* Glassmorphism Container */
+.glassmorphism-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+/* Glassmorphism Card */
+.glassmorphism-card {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 20px !important;
+  padding: 40px !important;
+  width: 420px !important;
+  max-width: 90vw !important;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  position: relative;
+  overflow: hidden;
+  display: block !important;
+}
+
+.glassmorphism-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  border-radius: 20px;
+  z-index: -1;
+}
+
+/* Logo Section */
+.logo-section {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.logo-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.logo-icon {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.target-circle {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.target-inner {
+  width: 20px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  position: relative;
+}
+
+.target-inner::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  background: #667eea;
+  border-radius: 50%;
+}
+
+.logo-text {
+  font-size: 28px;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+/* Auth Tabs */
+.auth-tabs {
+  display: flex;
+  margin-bottom: 30px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 12px 20px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.tab-button.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.tab-button:hover:not(.active) {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Welcome Message */
+.welcome-message {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.welcome-message h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+}
+
+/* Form Container */
+.form-container {
+  margin-bottom: 30px;
+}
+
+.input-wrapper {
+  margin-bottom: 20px;
+}
+
+.input-wrapper label {
+  display: block;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.input-container {
+  position: relative;
+}
+
+.glassmorphism-input {
+  width: 100%;
+  padding: 15px 45px 15px 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  color: white;
+  font-size: 16px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.glassmorphism-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.glassmorphism-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.input-icon {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+}
+
+/* Form Options */
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.glassmorphism-checkbox {
+  width: 18px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  appearance: none;
+  transition: all 0.3s ease;
+}
+
+.glassmorphism-checkbox:checked {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+}
+
+.glassmorphism-checkbox:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.checkbox-wrapper label {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.forgot-password {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.3s ease;
+}
+
+.forgot-password:hover {
+  color: white;
+}
+
+/* Login Button */
+.glassmorphism-button {
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.glassmorphism-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.glassmorphism-button:active {
+  transform: translateY(0);
+}
+
+/* Error Messages */
+.error {
+  color: #ff6b6b;
+  font-size: 14px;
+  margin: 10px 0;
+  text-align: center;
+}
+
+/* Signup Link */
+.signup-link {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.signup-link p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  margin: 0;
+}
+
+.signup-link a {
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.signup-link a:hover {
+  color: #667eea;
+}
+
+/* Social Login */
+.social-login {
+  margin-top: 30px;
+  text-align: center;
+}
+
+.social-text {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  margin-bottom: 15px;
+}
+
+.social-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.social-button {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.social-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.social-icon {
+  font-size: 18px;
+  color: white;
+}
+
+.social-button.google .social-icon {
+  font-weight: bold;
+  font-family: Arial, sans-serif;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+  .glassmorphism-card {
+    width: 95vw;
+    padding: 30px 20px;
+  }
+  
+  .logo-text {
+    font-size: 24px;
+  }
+  
+  .welcome-message h2 {
+    font-size: 20px;
+  }
+}
+/* Legacy styles removed - using new glassmorphism design */

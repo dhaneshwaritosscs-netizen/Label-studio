@@ -1,0 +1,105 @@
+.heidy-tip {
+  &__content {
+    padding: 1rem;
+    border: 1px solid #2a3a4f;  // Darker border to match background
+    font-size: 14px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.2);  // Enhanced shadow
+    box-sizing: border-box;
+     background-color: #e6f3ff;
+     color: black;  // Dark blue background as requested
+  }
+
+  &__header {
+    display: flex;
+    width: 100%;
+    min-height: 24px;
+    margin-bottom: 8px;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  &__title {
+    font-size: 16px;
+    font-weight: 600;  // Made bolder for better contrast
+    line-height: 24px;
+    letter-spacing: 0.15px;
+    color: black;  // White text for dark background
+  }
+
+  &__text {
+    line-height: 20px;
+    letter-spacing: 0.25px;
+    color: black;  // Light gray text for better readability
+  }
+
+  &__link {
+    color: #78b8f5;  // Light blue link for dark background
+    font-weight: 500;
+    display: block;
+
+    &:hover {
+      color: #364760;  // White on hover
+      text-decoration: underline;
+    }
+
+    &::before {
+      content: " ";
+    }
+  }
+
+  &__dismiss {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    display: flex;
+    box-shadow: none;
+    justify-content: center;
+    align-items: center;
+    background: transparent;  // Transparent background
+
+    svg {
+      width: 14px;
+      height: 14px;
+
+      .spike-fill {
+        fill: var(--color-neutral-surface);
+        display: none;
+      }
+      
+      .spike-stroke {
+        fill: var(--color-neutral-border);
+        display: none;
+      }
+    }
+
+    svg > path {
+      stroke: #ffffff;  // White close button
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);  // Semi-transparent white on hover
+      border-radius: 4px;
+
+      svg path {
+        stroke: #ffffff;  // White on hover
+      }
+    }
+  }
+
+  &__heidi {
+    margin-top: -12px;
+    padding-left: 16px;
+    pointer-events: none;
+    color: #ffffff;  // White opossum image
+
+    svg {
+      path.spike-stroke {
+        color: #ed1c24;
+        opacity: 0.9;
+        transition: all 0.2s ease;
+      }
+    }
+  }
+}

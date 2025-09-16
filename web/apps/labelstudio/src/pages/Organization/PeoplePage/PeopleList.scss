@@ -1,0 +1,204 @@
+.people-list {
+  width: 100%;
+  min-width: 400px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  
+  // Override any transparent text color from global styles
+  * {
+    color: black !important;
+  }
+
+  &__wrapper {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #f1f5f9;
+    overflow: hidden;
+  }
+
+  &__loading {
+    width: 100%;
+    display: flex;
+    min-height: 250px;
+    justify-content: center;
+    align-items: center;
+    background: #ffffff;
+    border-radius: 16px;
+  }
+
+  &__users {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__header {
+    padding: 24px 24px 16px 24px;
+    border-bottom: 1px solid #f1f5f9;
+    background: #ffffff;
+
+    .people-list__title {
+      font-size: 24px;
+      font-weight: 700;
+      color: black;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      &::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        background: #3b82f6;
+        border-radius: 50%;
+      }
+    }
+
+    .people-list__search-container {
+      margin-bottom: 16px;
+
+      .people-list__search-input {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        font-size: 14px;
+        background: #f8fafc;
+        color: black;
+        transition: all 0.2s ease;
+
+        &::placeholder {
+          color: black;
+        }
+
+        &:focus {
+          outline: none;
+          border-color: #3b82f6;
+          background: #ffffff;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+      }
+    }
+
+    .people-list__filters {
+      display: flex;
+      gap: 8px;
+
+      .people-list__filter-button {
+        padding: 8px 16px;
+        background-color: rgb(25 44 89);
+        border: 1px solid rgb(102, 126, 234);
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        color: #ffffff;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background-color: rgb(25 44 89);
+          border-color: rgb(91, 113, 210);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+      }
+    }
+  }
+
+  &__user-cards {
+    padding: 16px 24px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 600px;
+    overflow-y: auto;
+  }
+
+  &__user-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: #ffffff;
+    border: 1px solid #f1f5f9;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+
+    &:hover {
+      background: #f8fafc;
+      border-color: #e2e8f0;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    &_active {
+      background: #f0f9ff;
+      border-color: #3b82f6;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+
+      .people-list__view-profile-button {
+        background-color: rgb(25 44 89);
+        color: #ffffff;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        border: 1px solid rgb(102, 126, 234);
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background-color: rgb(25 44 89);
+          border-color: rgb(91, 113, 210);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+      }
+    }
+  }
+
+  &__user-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+  }
+
+  &__avatar {
+    flex-shrink: 0;
+  }
+
+  &__details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+  }
+
+  &__email {
+    font-size: 15px;
+    font-weight: 600;
+    color: black;
+    line-height: 1.4;
+  }
+
+  &__activity {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: black;
+    font-weight: 500;
+  }
+
+  &__status-dot {
+    width: 6px;
+    height: 6px;
+    background: #10b981;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+}

@@ -1,0 +1,637 @@
+@import "./antd-no-reset";
+@import "./variables";
+@import "./mixins";
+@import "./functions";
+
+.root {
+  font-size: 14px;
+  font-variant: tabular-nums;
+  font-feature-settings: "tnum";
+  line-height: 1.5715;
+}
+
+.ant-divider-horizontal.ant-divider-with-text-center::before,
+.ant-divider-horizontal.ant-divider-with-text-left::before,
+.ant-divider-horizontal.ant-divider-with-text-right::before,
+.ant-divider-horizontal.ant-divider-with-text-center::after,
+.ant-divider-horizontal.ant-divider-with-text-left::after,
+.ant-divider-horizontal.ant-divider-with-text-right::after {
+  border-top-color: var(--color-neutral-border) !important;
+}
+
+.renderall {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.renderall > div {
+  width: 49%;
+  margin-right: 1%;
+}
+
+.fade {
+  opacity: 1;
+  animation-name: fade-in-opacity;
+  animation-iteration-count: 1;
+  animation-timing-function: ease-in;
+  animation-duration: 1s;
+}
+
+.htx-highlight > .htx-highlight {
+  padding: 2px;
+}
+
+// .htx-no-highlight {
+//     display: none;
+// }
+
+.htx-no-label::after {
+  display: none;
+}
+
+.htx-highlight {
+  // border: 1px dashed #00aeff;
+}
+
+.htx-highlight-last {
+  // position: relative;
+}
+
+.htx-highlight-last::after {
+  margin-left: 2px;
+
+  // top: -0.3em;
+  // margin-right: 2px;
+  // position: relative;
+  // color: #1f104d;
+  // font-size: 75%;
+  // font-weight: bold;
+}
+
+.htx-yoyo::after {
+  content: "Yoyo";
+}
+
+@keyframes fade-in-opacity {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+.ant-list-item-action {
+  margin-left: 10px !important;
+}
+
+.ant-modal-confirm-error ul {
+  padding-left: 1.5em;
+}
+
+.react-dropdown-tree-select .node > .toggle {
+  font-family: var(--font-mono);
+  font-style: normal;
+  color: initial;
+  cursor: pointer;
+}
+
+// when node is disabled (when leafsOnly enabled) allow to collapse it by click anywhere
+// achieve this with enormously growing button to the right covering all the text
+.react-dropdown-tree-select .node.disabled > .toggle {
+  padding-right: 100%;
+  margin-right: -100%;
+  position: relative;
+  z-index: 1;
+  user-select: none;
+}
+
+.react-dropdown-tree-select .node.disabled > label {
+  color: initial;
+  cursor: default;
+}
+
+.react-dropdown-tree-select .node.disabled > label > input {
+  opacity: 0;
+}
+
+[data-color-scheme="dark"] input[type="number"] {
+  color-scheme: dark;
+}
+
+.number input {
+  background-color: var(--color-neutral-background);
+  border: 1px solid var(--color-neutral-border);
+  color: var(--color-neutral-content);
+  border-radius: var(--corner-radius-small);
+  padding: var(--spacing-tight) var(--spacing-base);
+  transition: all 150ms ease-out;
+
+  &[type="number"]:hover {
+    border-color: var(--color-neutral-border-bold);
+  }
+
+  &[type="number"]:focus {
+    box-shadow: 0 0 0 4px var(--color-primary-focus-outline);
+    border-color: var(--color-neutral-border-bold);
+    outline: none;
+  }
+
+  &[type="range"] {
+    accent-color: var(--color-primary-surface);
+  }
+
+  &[type="range"]:hover {
+    accent-color: var(--color-primary-surface-hover);
+  }
+  
+  /* Removes default focus */
+  &[type="range"]:focus {
+    outline: none;
+  }
+  
+  // /* slider thumb */
+  &[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    margin-top: 0;
+    transition: all 150ms ease-out;
+    border-radius: 50%;
+  }
+  
+  &[type="range"]:hover::-webkit-slider-thumb {
+    background-color: var(--color-primary-surface-hover);
+  }
+  
+  &[type="range"]:focus::-webkit-slider-thumb {
+    background-color: var(--color-primary-surface-hover);
+    outline: 4px solid var(--color-primary-focus-outline);
+    border: 1px solid var(--color-primary-border-bold);
+  }
+}
+
+:global(.htx-datetime) {
+  display: flex;
+  flex-direction: row;
+  gap: var(--spacing-base);
+  padding: 0 var(--spacing-tight);
+}
+
+:global(.htx-datetime input) {
+  background-color: var(--color-neutral-background);
+  border: 1px solid var(--color-neutral-border);
+  color: var(--color-neutral-content);
+  border-radius: var(--corner-radius-small);
+  padding: var(--spacing-tighter) var(--spacing-tight) var(--spacing-tighter) var(--spacing-base);
+  transition: all 150ms ease-out;
+}
+
+:global(.htx-datetime input:hover) {
+  border: 1px solid var(--color-neutral-border-bold);
+}
+
+:global(.htx-datetime input:focus) {
+  border: 1px solid var(--color-neutral-border-bold);
+  box-shadow: 0 0 0 4px var(--color-primary-focus-outline);
+  outline: none;
+}
+
+:global(.htx-datetime input::-webkit-calendar-picker-indicator) {
+  opacity: 0.5;
+}
+
+:global([data-color-scheme="dark"] .htx-datetime input[type="time"]) {
+  color-scheme: dark;
+}
+
+/* Modern Light Theme Styling */
+* {
+  box-sizing: border-box;
+}
+
+/* Modern Button Styling */
+button, .ant-btn {
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  backdrop-filter: blur(10px) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #334155 !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+button:hover, .ant-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06) !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+}
+
+button:active, .ant-btn:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Primary Button Styling */
+.ant-btn-primary, button[type="submit"] {
+  background-color: rgb(25 44 89) !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.3), 0 2px 4px rgba(0, 0, 0, 0.06) !important;
+}
+
+.ant-btn-primary:hover, button[type="submit"]:hover {
+  background-color: rgb(25 44 89) !important;
+  box-shadow: 0 8px 28px rgba(99, 102, 241, 0.4), 0 4px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Modern Panel Styling */
+.ant-card, .panel, .lsf-panel {
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  backdrop-filter: blur(20px) !important;
+  background: rgba(255, 255, 255, 0.8) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* Modern Input Styling */
+.ant-input, .ant-select-selector {
+  border-radius: 12px !important;
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(10px) !important;
+  color: #334155 !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+
+.ant-input:focus, .ant-select-selector:focus {
+  border-color: rgba(99, 102, 241, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1), 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Modern Checkbox Styling */
+.ant-checkbox-wrapper {
+  .ant-checkbox {
+    border-radius: 8px !important;
+    border: 2px solid rgba(226, 232, 240, 0.8) !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  }
+  
+  .ant-checkbox-checked .ant-checkbox-inner {
+    background-color: rgb(25 44 89) !important;
+    border-color: transparent !important;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3) !important;
+  }
+  
+  .ant-checkbox:hover .ant-checkbox-inner {
+    border-color: rgba(99, 102, 241, 0.5) !important;
+  }
+}
+
+/* Modern Typography */
+h1, h2, h3, h4, h5, h6 {
+  color: #1e293b !important;
+  font-weight: 700 !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+}
+
+p, span, div {
+  color: #475569 !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+}
+
+/* Better text contrast for labels and content */
+label, .ant-form-item-label {
+  color: #374151 !important;
+  font-weight: 600 !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+}
+
+/* Modern Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(241, 245, 249, 0.8);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgb(25 44 89);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(25 44 89);
+}
+
+/* Additional modern styling */
+.ant-menu, .ant-menu-item {
+  color: #475569 !important;
+  background: rgba(255, 255, 255, 0.8) !important;
+  border-radius: 8px !important;
+}
+
+.ant-menu-item:hover {
+  background: rgba(99, 102, 241, 0.1) !important;
+  color: #6366f1 !important;
+}
+
+.ant-tabs-tab {
+  color: #64748b !important;
+  font-weight: 500 !important;
+}
+
+.ant-tabs-tab-active {
+  color: #6366f1 !important;
+  font-weight: 600 !important;
+}
+
+.ant-tabs-content-holder {
+  background: transparent !important;
+}
+
+/* ONLY Red Highlighted Elements - Direct Style Injection */
+/* Force gradient on specific tab elements */
+.ant-tabs-tab {
+  background-color: rgb(25 44 89) !important;
+  background-color: transparent !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.ant-tabs-tab-active {
+  background-color: rgb(25 44 89) !important;
+  background-color: transparent !important;
+  color: #ffffff !important;
+}
+
+/* Update button specifically */
+.update-btn {
+  //background-color: rgb(25 44 89) !important;
+  background-color: transparent !important;
+  background:  rgb(25 44 89);
+  background-color: rgb(25 44 89) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+/* Panel tabs */
+.panel-tabs__tab {
+  background-color: rgb(25 44 89) !important;
+  border: none;
+  color: #ffffff !important;
+}
+
+.lsf-panel-tabs__tab {
+  background-color: rgb(25 44 89) !important;
+  border: none;
+  color: #ffffff !important;
+}
+
+.panel-tabs__tab_active {
+  background-color: rgb(25 44 89);
+  color: #ffffff;
+}
+
+/* Improve form elements visibility */
+.ant-form-item {
+  color: #475569 !important;
+}
+
+.ant-form-item-control-input {
+  color: #475569 !important;
+}
+
+/* Improve table visibility */
+.ant-table {
+  background: rgba(255, 255, 255, 0.8) !important;
+  color: #475569 !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+.ant-table-thead > tr > th {
+  background: rgba(248, 250, 252, 0.8) !important;
+  color: #374151 !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8) !important;
+  font-weight: 600 !important;
+}
+
+.ant-table-tbody > tr > td {
+  background: rgba(255, 255, 255, 0.6) !important;
+  color: #475569 !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.4) !important;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: rgba(99, 102, 241, 0.05) !important;
+}
+
+/* Image container styling */
+.image-container, .lsf-image {
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  overflow: hidden !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Toolbar styling */
+.toolbar, .lsf-toolbar {
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(20px) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+}
+
+/* Specific DataManager Toolbar Button Override - ONLY these buttons */
+.datamanager .button-dm,
+.datamanager [class*="button-dm"],
+.datamanager .button-ls,
+.datamanager [class*="button-ls"],
+.datamanager button[class*="button-dm"],
+.datamanager button[class*="button-ls"] {
+  //background-color: rgb(25 44 89) !important;
+  background-color: transparent !important;
+  background: rgb(25, 44, 89) !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+  transition: all 0.3s ease !important;
+}
+
+/* Ensure all icons within DataManager buttons are white */
+.datamanager .button-dm svg,
+.datamanager [class*="button-dm"] svg,
+.datamanager .button-ls svg,
+.datamanager [class*="button-ls"] svg,
+.datamanager button[class*="button-dm"] svg,
+.datamanager button[class*="button-ls"] svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+.datamanager .button-dm:hover,
+.datamanager [class*="button-dm"]:hover,
+.datamanager .button-ls:hover,
+.datamanager [class*="button-ls"]:hover,
+.datamanager button[class*="button-dm"]:hover,
+.datamanager button[class*="button-ls"]:hover {
+  background: rgb(25, 44, 89) !important;
+  background-color: rgb(25, 44, 89) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: none !important;
+}
+
+/* Ensure all icons within DataManager buttons remain white on hover */
+.datamanager .button-dm:hover svg,
+.datamanager [class*="button-dm"]:hover svg,
+.datamanager .button-ls:hover svg,
+.datamanager [class*="button-ls"]:hover svg,
+.datamanager button[class*="button-dm"]:hover svg,
+.datamanager button[class*="button-ls"]:hover svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+.datamanager .button-dm:active,
+.datamanager [class*="button-dm"]:active,
+.datamanager .button-ls:active,
+.datamanager [class*="button-ls"]:active,
+.datamanager button[class*="button-dm"]:active,
+.datamanager button[class*="button-ls"]:active {
+  background: rgb(25, 44, 89) !important;
+  background-color: rgb(25, 44, 89) !important;
+  transform: translateY(0) !important;
+}
+
+/* Ensure all icons within DataManager buttons remain white on active */
+.datamanager .button-dm:active svg,
+.datamanager [class*="button-dm"]:active svg,
+.datamanager .button-ls:active svg,
+.datamanager [class*="button-ls"]:active svg,
+.datamanager button[class*="button-dm"]:active svg,
+.datamanager button[class*="button-ls"]:active svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+/* Specific override for primary buttons in DataManager */
+.datamanager .button-dm_look_primary,
+.datamanager [class*="button-dm_look_primary"],
+.datamanager .button-ls_look_primary,
+.datamanager [class*="button-ls_look_primary"] {
+  background: rgb(25, 44, 89) !important;
+  background-color: rgb(25, 44, 89) !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+
+/* Specific override for LabelButton only */
+.datamanager [data-interface="labelButton"] .button-dm,
+.datamanager [data-interface="labelButton"] button {
+  background: rgb(25 44 89) !important;
+  background-color: rgb(25 44 89) !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+
+.datamanager [data-interface="labelButton"] .button-dm:hover,
+.datamanager [data-interface="labelButton"] button:hover {
+  background: rgb(25 44 89) !important;
+  background-color: rgb(25 44 89) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+
+}
+
+.datamanager [data-interface="labelButton"] .button-dm:active,
+.datamanager [data-interface="labelButton"] button:active {
+  background: rgb(25 44 89) !important;
+  background-color: rgb(25 44 89) !important;
+  transform: translateY(0) !important;
+}
+
+/* Specific override for ONLY the three buttons in TableRow (Import, Export, Label) */
+.table-row button,
+[class*="table-row"] button,
+.datamanager .table-row button,
+.datamanager [class*="table-row"] button {
+  // background-color: rgb(25 44 89) !important;
+  // background-color: transparent !important;
+  background:  rgb(25 44 89);
+  background-color: rgb(25 44 89) !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+  transition: all 0.3s ease !important;
+}
+
+.table-row button:hover,
+[class*="table-row"] button:hover,
+.datamanager .table-row button:hover,
+.datamanager [class*="table-row"] button:hover {
+  background-color: rgb(25 44 89) !important;
+  background-color: transparent !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4) !important;
+}
+
+.table-row button:active,
+[class*="table-row"] button:active,
+.datamanager .table-row button:active,
+.datamanager [class*="table-row"] button:active {
+  background-color: rgb(25 44 89) !important;
+  background-color: transparent !important;
+  transform: translateY(0) !important;
+}
+
+/* Ultra-specific overrides for button text color */
+button[style*="rgb(25 44 89)"],
+button[style*="background: rgb(25 44 89)"],
+button[style*="background-color: rgb(25 44 89)"],
+.lsf-button[style*="rgb(25 44 89)"],
+.button[style*="rgb(25 44 89)"],
+span[style*="rgb(25 44 89)"] {
+  color: #ffffff !important;
+  --button-color: #ffffff !important;
+  --color: #ffffff !important;
+}
+
+/* Override any theme-specific color variables */
+[data-color-scheme="light"] button[style*="rgb(25 44 89)"],
+[data-color-scheme="dark"] button[style*="rgb(25 44 89)"],
+[data-color-scheme="light"] .lsf-button[style*="rgb(25 44 89)"],
+[data-color-scheme="dark"] .lsf-button[style*="rgb(25 44 89)"] {
+  color: #ffffff !important;
+}
+
+/* Force white text for any element with dark blue background */
+[style*="rgb(25 44 89)"] {
+  color: #ffffff !important;
+}
+
+[style*="rgb(25 44 89)"] * {
+  color: #ffffff !important;
+}

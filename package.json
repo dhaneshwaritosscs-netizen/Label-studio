@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "caniuse-lite": "^1.0.30001721",
+    "react-swipeable": "^7.0.2"
+  }
+}

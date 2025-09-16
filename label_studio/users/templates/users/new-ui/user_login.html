@@ -1,0 +1,48 @@
+{% extends 'users/new-ui/user_base.html' %}
+
+{% block content %}
+  {{ block.super }}
+  <script nonce="{{request.csp_nonce}}">
+    gaClientIdTrackingIframe('users.login.view');
+    // Give time for `ls_gaclient_id` to be set
+    setTimeout(() => {
+      const ls_gaclient_id = sessionStorage.getItem('ls_gaclient_id');
+      __lsa('users.login.view', { ls_gaclient_id });
+    }, 2000);
+  </script>
+{% endblock %}
+
+{% block user_content %}
+  <form id="login-form" action="{% url 'user-login' %}?next={{ next }}" method="post">
+    {% csrf_token %}
+    <div class="input-wrapper">
+      <label>Email/Username</label>
+      <div class="input-container">
+        <input type="text" class="glassmorphism-input" name="email" id="email" value="{{ form.data.email }}" placeholder="Email/Username">
+        <span class="input-icon">🔒</span>
+      </div>
+    </div>
+    <div class="input-wrapper">
+      <label>Password</label>
+      <div class="input-container">
+        <input type="password" class="glassmorphism-input" name="password" id="password" placeholder="Password">
+        <span class="input-icon">🔒</span>
+      </div>
+    </div>
+    {% if form.non_field_errors %}
+      {% for error in form.non_field_errors %}
+        <p class="error">
+          {{ error }}
+        </p>
+      {% endfor %}
+    {% endif %}
+    <div class="form-options">
+      <div class="checkbox-wrapper">
+        <input type="checkbox" id="persist_session" name="persist_session" class="glassmorphism-checkbox" checked="checked" />
+        <label for="persist_session">Keep me logged in this browser</label>
+      </div>
+      <a href="#" class="forgot-password">Forget Password?</a>
+    </div>
+    <button type="submit" class="glassmorphism-button">LOGIN</button>
+  </form>
+{% endblock %}

@@ -1,0 +1,10 @@
+[33mb30817db3[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Update Label Studio project with custom modifications
+[33m347e47a5d[m first commit
+[33m1294cce16[m first commit
+[33macb7d9c49[m[33m ([m[1;31morigin/develop[m[33m, [m[1;31morigin/HEAD[m[33m)[m ci: Update Feature Flags
+[33m27ec9362c[m[33m ([m[1;33mtag: [m[1;33mnightly[m[33m)[m fix: ROOT-31: use overlap instead of maximum annotations when adjusting overlap values (#7656)
+[33mf28798947[m feat: LEAP-2036: Summary page for View All (#7439)
+[33m9c9c5c6f8[m fix: FIT-158: Add activeLabelKey to generate unique key for selected labels (#7665)
+[33m7c638d237[m fix: Add activeLabelKey to generate unique key for selected labels (#7583)
+[33me54c3e1ed[m fix: BROS-38: Fix sentry issue (i.map is not a function) +1 more (#7662)
+[33m029639924[m fix: UTC-22: Validation error when updating task data via API (#7644)

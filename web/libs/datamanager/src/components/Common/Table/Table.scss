@@ -1,0 +1,331 @@
+.columns__selector {
+  position: absolute;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  justify-content: flex-end;
+  top: 0;
+
+  &__button-new.columns__selector__button-new {
+    z-index: 1000;
+    height: 28px;
+    width: 28px;
+    background-color: var(--color-neutral-background);
+    box-shadow: 0 2px 5px 0 var(--black_20);
+    margin: 6.5px 20px;
+    border-radius: 4px;
+
+    &:hover {
+      border: none;
+      filter: none;
+      background: var(--color-primary-emphasis-subtle);
+
+      &__icon {
+        color: var(--color-neutral-content);
+      }
+    }
+
+    &:active {
+      color: var(--color-neutral-content);
+      background: linear-gradient(0deg, var(--black_2), var(--black_2)), #FFF;
+      box-shadow: 0 0 5px 0 var(--black_20);
+    }
+  }
+}
+
+.table {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  background-color: #f8fafc;
+  padding: 20px;
+  gap: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+
+  &_fit {
+    width: max-content;
+  }
+
+  &__sticky-header {
+    display: none; // Hide header for card layout
+  }
+
+  &__auto-size,
+  &__virtual {
+    width: auto;
+
+    .table_fit & {
+      width: fit-content;
+    }
+  }
+
+  &__virtual {
+    max-width: 100vw;
+    min-width: 100vw;
+  }
+
+  &__virtual>div {
+    min-width: fit-content;
+  }
+
+  &__row-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #f1f5f9;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-bottom: 0;
+    min-height: auto;
+    height: auto;
+
+    &_disabled,
+    &_loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    &_even:not(.table__row_wrapper_selected) {
+      background-color: #ffffff;
+    }
+
+    &_selected {
+      //background: linear-gradient(135deg, rgb(102, 126, 234) 0%, rgb(118, 75, 162) 100%);
+      background-color: rgb(25 44 89);
+     //background: linear-gradient(135deg, #00d2ff, #3a7bd5);      border-color: #3b82f6;
+      box-shadow: 0 4px 6px rgba(59, 130, 246, 0.1), 0 1px 2px rgba(59, 130, 246, 0.06);
+      color: #ffffff;
+      
+      * {
+        color: #f7eeee !important;
+        
+      }
+      
+      button {
+        background-color: rgb(25 44 89);
+      // background: linear-gradient(135deg, #ff6a00, #ee0979);
+       color: #f3eded !important;
+        border: 1.5px solid rgba(8, 8, 8, 0.3) !important;
+      }
+    }
+
+    &:not(.table__row_wrapper_selected):hover {
+      background-color: #f8fafc;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.08);
+      border-color: #e2e8f0;
+    }
+
+    &_highlighted:not(.table__row_wrapper_selected)::after {
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      content: "";
+      z-index: 50;
+      position: absolute;
+      pointer-events: none;
+      box-shadow: 0 0 0 2px #3b82f6 inset;
+      border-radius: 12px;
+    }
+  }
+
+  &__cell {
+    flex: 1;
+    width: 100%;
+    min-width: auto;
+    max-width: none;
+    padding: 0;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    position: relative;
+    word-break: break-word;
+    color: #1f2937;
+    min-height: auto;
+    font-size: 14px;
+    line-height: 1.6;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+
+    &.select-row {
+      width: auto;
+      min-width: auto;
+      max-width: none;
+      justify-content: flex-start;
+    }
+
+    &.show-source {
+      width: auto;
+      min-width: auto;
+      max-width: none;
+      justify-content: flex-end;
+    }
+  }
+
+  &__cell-content {
+    flex: 1;
+    display: flex;
+    white-space: normal;
+    align-items: center;
+    color: #1f2937;
+    
+            // Image styling for DP display - Override ImageCell inline styles
+        img {
+          max-width: 100% !important;
+          max-height: 100% !important;
+          width: auto !important;
+          height: auto !important;
+          object-fit: contain !important;
+          border-radius: 8px !important;
+          display: block !important;
+          margin: 0 auto !important;
+          position: absolute !important;
+          top: 50% !important;
+          left: 50% !important;
+          transform: translate(-50%, -50%) !important;
+          z-index: 1 !important;
+        }
+        
+        // Ensure images are centered in containers
+        .table-row > div:first-child img {
+          position: absolute !important;
+          top: 50% !important;
+          left: 50% !important;
+          transform: translate(-50%, -50%) !important;
+          margin: 0 !important;
+          display: block !important;
+          max-width: 100% !important;
+          max-height: 100% !important;
+          width: auto !important;
+          height: auto !important;
+          object-fit: contain !important;
+        }
+        
+        // Ensure image container is properly centered
+        .table__cell-content {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          width: 100% !important;
+          height: 100% !important;
+          position: relative !important;
+        }
+        
+        // Force image centering - Override ImageCell styles
+        .table__cell-content img {
+          position: absolute !important;
+          top: 50% !important;
+          left: 50% !important;
+          transform: translate(-50%, -50%) !important;
+          margin: 0 !important;
+          display: block !important;
+          max-width: 100% !important;
+          max-height: 100% !important;
+          width: auto !important;
+          height: auto !important;
+          object-fit: contain !important;
+        }
+        
+        // Override ImageCell inline styles specifically
+        .table__cell img[style*="maxWidth"] {
+          position: absolute !important;
+          top: 50% !important;
+          left: 50% !important;
+          transform: translate(-50%, -50%) !important;
+          margin: 0 !important;
+          display: block !important;
+          max-width: 100% !important;
+          max-height: 100% !important;
+          width: auto !important;
+          height: auto !important;
+          object-fit: contain !important;
+        }
+        
+        // Global image centering
+        .table img {
+          position: absolute !important;
+          top: 50% !important;
+          left: 50% !important;
+          transform: translate(-50%, -50%) !important;
+          margin: 0 !important;
+          display: block !important;
+          max-width: 100% !important;
+          max-height: 100% !important;
+          width: auto !important;
+          height: auto !important;
+          object-fit: contain !important;
+        }
+        
+        // Target the exact CellRenderer structure
+        .table__cell .table__cell-content img {
+          position: absolute !important;
+          top: 50% !important;
+          left: 50% !important;
+          transform: translate(-50%, -50%) !important;
+          margin: 0 !important;
+          display: block !important;
+          max-width: 100% !important;
+          max-height: 100% !important;
+          width: auto !important;
+          height: auto !important;
+          object-fit: contain !important;
+        }
+        
+        // DP container styling - light background with centered image
+        .table-row > div:first-child {
+          background-color: #f8fafc !important;
+          border: none !important;
+          border-radius: 12px !important;
+          overflow: hidden !important;
+          position: relative !important;
+          padding: 20px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+        
+        // Ensure images are centered in DP container
+        .table-row > div:first-child .table__cell img {
+          position: absolute !important;
+          top: 50% !important;
+          left: 50% !important;
+          transform: translate(-50%, -50%) !important;
+          margin: 0 !important;
+          display: block !important;
+          max-width: 100% !important;
+          max-height: 100% !important;
+          width: auto !important;
+          height: auto !important;
+          object-fit: contain !important;
+          border-radius: 8px !important;
+        }
+        
+        // DP image container styling
+        .table-row > div:first-child .table__cell {
+          width: 140px !important;
+          height: 140px !important;
+          background-color: #ffffff !important;
+          border-radius: 12px !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+          overflow: hidden !important;
+          position: relative !important;
+        }
+    width: 100%;
+    min-height: 100%;
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 1.6;
+    letter-spacing: -0.01em;
+
+    &_disabled {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+  }
+}

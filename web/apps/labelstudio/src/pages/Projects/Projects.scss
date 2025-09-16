@@ -1,0 +1,357 @@
+// Hide HeidiTip completely - must be first
+.lsf-heidy-tip,
+.heidy-tip,
+[class*="heidy-tip"],
+[class*="lsf-heidy-tip"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+// Global button gradient override - must be first
+html body .button-ls_look_primary {
+  --button-background-color: transparent !important;
+  --button-color: #ffffff !important;
+  background-color: rgb(25 44 89) !important;
+  border: none !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+  transition: all 0.3s ease !important;
+
+  &:hover {
+    --button-background-color: transparent !important;
+    background-color: rgb(25 44 89) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4) !important;
+  }
+
+  &:active {
+    --button-background-color: transparent !important;
+    background-color: rgb(25 44 89) !important;
+    transform: translateY(0) !important;
+  }
+
+  &:focus {
+    --button-background-color: transparent !important;
+    background-color: rgb(25 44 89) !important;
+  }
+}
+
+// Aggressive override for all red highlighting - must be first
+* {
+  &[class*="htx-highlight"],
+  &[class*="highlight"],
+  &.htx-highlight,
+  &.highlight {
+    background-color: #ed1c24 !important;
+    color: white !important;
+    opacity: 0.9 !important;
+    border-radius: 3px !important;
+    padding: 2px 4px !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 2px 6px rgba(237, 28, 36, 0.3) !important;
+    font-weight: 500 !important;
+    border: none !important;
+  }
+}
+
+// Additional specific overrides for Projects page
+.htx-highlight,
+.htx-highlight:hover,
+.htx-highlight-last,
+.htx-highlight-last::after,
+.htx-highlight > .htx-highlight,
+.state,
+[class*="state"] {
+  background-color: #ed1c24 !important;
+  color: white !important;
+  opacity: 0.9 !important;
+  border-radius: 3px !important;
+  padding: 2px 4px !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 2px 6px rgba(237, 28, 36, 0.3) !important;
+  font-weight: 500 !important;
+  border: none !important;
+}
+
+.projects-page {
+  min-height: calc(100vh - var(--header-height));
+  background: transparent;
+  padding: 20px;
+
+  &__loading {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - var(--header-height));
+  }
+
+  &__list {
+    padding: 40px;
+    display: grid;
+    box-sizing: border-box;
+    grid-gap: 32px;
+    grid-auto-rows: 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  &__link {
+    color: var(--color-neutral-content);
+    display: block;
+    display: flex;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--color-neutral-content);
+    }
+  }
+
+  &__pages {
+    background: rgba(255, 255, 255, 0.95);
+   //background: rgba(74, 86, 88, 0.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    bottom: 0;
+    width: 100%;
+    position: sticky;
+    display: flex;
+    padding: 20px 40px;
+    justify-content: flex-end;
+    box-sizing: border-box;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+  }
+
+  @media (width >= 1200px) {
+    &__list {
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+  }
+
+  @media (width >= 1360px) {
+    &__list {
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    }
+  }
+}
+
+.empty-projects-page {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 60px 40px;
+  margin: 40px auto;
+  max-width: 600px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+
+  &__heidi {
+    height: 12rem;
+    margin-top: 2rem;
+    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.1));
+  }
+
+  &__header {
+    font-size: 36px;
+    font-weight: 700;
+    margin: 24px 16px;
+    color: #2d3748;
+    background-color: rgb(25 44 89);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  p {
+    font-size: 1.25rem;
+    color: #4a5568;
+    margin: 0;
+    line-height: 1.6;
+  }
+
+  &__action {
+    margin: 2rem 0;
+  }
+
+  // Ensure Create button maintains gradient background
+  .button-ls_look_primary {
+    --button-background-color: transparent !important;
+    --button-color: #ffffff !important;
+    background-color: rgb(25 44 89) !important;
+    border: none !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+    transition: all 0.3s ease !important;
+
+    &:hover {
+      --button-background-color: transparent !important;
+      background-color: rgb(25 44 89) !important;
+      transform: translateY(-1px) !important;
+      box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4) !important;
+    }
+
+    &:active {
+      --button-background-color: transparent !important;
+      background-color: rgb(25 44 89) !important;
+      transform: translateY(0) !important;
+    }
+
+    &:focus {
+      --button-background-color: transparent !important;
+      background-color: rgb(25 44 89) !important;
+    }
+  }
+}
+
+.project-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  overflow: hidden;
+  color: var(--color-neutral-content-subtle);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  
+  // Force black background override
+  &[style*="background: #000000"] {
+    background: #000000 !important;
+  }
+
+  // Override any red highlighting with beautiful #ed1c24
+  :global(.htx-highlight),
+  :global(.htx-highlight:hover) {
+    background-color: #ed1c24 !important;
+    color: white !important;
+    opacity: 0.9 !important;
+    border-radius: 3px !important;
+    padding: 2px 4px !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 2px 6px rgba(237, 28, 36, 0.3) !important;
+    font-weight: 500 !important;
+  }
+
+  &:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    border-color: rgba(102, 126, 234, 0.3);
+  }
+
+  &__header {
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 150ms ease-out;
+    background-color: rgb(25 44 89);
+  }
+
+  &__menu {
+    margin-left: auto;
+
+    .button-ls {
+      margin-right: -10px;
+      opacity: 0.7;
+      transition: all 0.2s ease;
+
+      --button-color: var(--text-color);
+
+      &:hover {
+        opacity: 1;
+        transform: scale(1.05);
+      }
+
+      &__icon {
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+
+  &__title {
+    display: flex;
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    line-height: 24px;
+    align-items: center;
+    color: #2d3748;
+
+    &-text {
+      max-width: 250px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  &__summary {
+    flex: 1;
+    font-size: 14px;
+    line-height: 22px;
+    color: #4a5568;
+  }
+
+  &__annotation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+  }
+
+  &__detail {
+    display: grid;
+    grid-auto-flow: column;
+    grid-gap: 20px;
+    grid-auto-columns: max-content;
+    padding: 16px 20px;
+
+    &-item {
+      --icon-color: var(--color-neutral-background);
+
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 8px;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.9);
+        transform: translateY(-2px);
+      }
+
+      & .project-card__icon {
+        color: var(--icon-color);
+        width: 20px;
+        height: 20px;
+      }
+
+      &_type {
+        &_completed {
+          --icon-color: var(--color-positive-icon);
+        }
+
+        &_rejected {
+          --icon-color: var(--color-negative-icon);
+        }
+
+        &_predictions {
+          --icon-color: var(--color-primary-icon);
+        }
+      }
+    }
+  }
+}
