@@ -87,18 +87,22 @@ const MixinBase = types
 
       self.total = total;
 
-      newEntity.forEach((n) => {
-        const index = self.list.findIndex((i) => i.id === n.id);
-
-        if (index >= 0) {
-          self.list.splice(index, 1);
-        }
-      });
-
       if (reload) {
+        // For reload, replace the entire list
         self.list = [...newEntity];
       } else {
-        self.list.push(...newEntity);
+        // For incremental updates, properly handle additions and removals
+        newEntity.forEach((n) => {
+          const index = self.list.findIndex((i) => i.id === n.id);
+
+          if (index >= 0) {
+            // Update existing item
+            self.list.splice(index, 1, n);
+          } else {
+            // Add new item
+            self.list.push(n);
+          }
+        });
       }
 
       self.associatedList = associatedList;
@@ -125,6 +129,20 @@ const MixinBase = types
       self.list = [];
       self.page = 0;
       self.total = 0;
+    },
+
+    removeItems(itemIds) {
+      // Remove items from the list by their IDs
+      if (Array.isArray(itemIds)) {
+        itemIds.forEach(id => {
+          const index = self.list.findIndex((item) => item.id === id);
+          if (index >= 0) {
+            self.list.splice(index, 1);
+          }
+        });
+        // Update total count
+        self.total = Math.max(0, self.total - itemIds.length);
+      }
     },
   }));
 

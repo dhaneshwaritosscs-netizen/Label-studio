@@ -760,6 +760,28 @@ export const AppStore = types
         return;
       }
 
+      // Handle bulk delete operations specifically
+      if (actionId === "delete_tasks" && result.processed_items > 0) {
+        try {
+          // Remove deleted items from the current view's data store
+          const deletedItemIds = selected?.snapshot?.included || [];
+          if (deletedItemIds.length > 0) {
+            view.dataStore.removeItems(deletedItemIds);
+          }
+          // Clear selection after successful deletion
+          view.clearSelection();
+          // Update project data
+          yield self.fetchProject();
+        } catch (error) {
+          console.error('Error handling bulk delete:', error);
+          // Fallback to full reload if there's an error
+          yield view.reload();
+          self.fetchProject();
+          view.clearSelection();
+        }
+        return result;
+      }
+
       if (options.reload !== false) {
         yield view.reload();
         self.fetchProject();

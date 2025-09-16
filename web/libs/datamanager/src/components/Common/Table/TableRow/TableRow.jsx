@@ -119,6 +119,8 @@ export const TableRow = observer(({ data, even, style, wrapperStyle, onClick, st
         throw new Error('Failed to delete task');
       }
       
+      const result = await response.json();
+      
       // Remove the task from the UI by reloading the page
       window.location.reload();
     } catch (error) {
@@ -151,11 +153,11 @@ export const TableRow = observer(({ data, even, style, wrapperStyle, onClick, st
   return (
     <div className={rowWrapperCN.mod(mods).toString()} style={{...wrapperStyle, position: 'relative'}} onClick={(e) => onClick?.(data, e)}>
       <div className={tableRowCN.toString()} style={style} data-leave={true}>
-        {/* Checkbox in top-left corner */}
+        {/* Checkbox in top-right corner */}
         <div className="task-checkbox-container" style={{
           position: 'absolute',
           top: '12px',
-          left: '12px',
+          right: '12px',
           zIndex: 10
         }}>
           {selectColumn && (
@@ -167,7 +169,7 @@ export const TableRow = observer(({ data, even, style, wrapperStyle, onClick, st
         <div className="task-menu-container" style={{
           position: 'absolute',
           top: '12px',
-          right: '12px',
+          right: '48px',
           zIndex: 10
         }}>
           <button
