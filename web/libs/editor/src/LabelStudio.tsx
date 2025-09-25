@@ -24,6 +24,16 @@ declare global {
 
 configure({
   isolateGlobalState: true,
+  // Add error handling for mobx-state-tree reference errors
+  onError: (error) => {
+    if (error.message && error.message.includes("Failed to resolve reference") && 
+        (error.message.includes("to type 'User'") || error.message.includes("to type 'UserExtended'"))) {
+      console.warn("MobX State Tree InvalidReferenceError caught in mobx configure:", error.message);
+      return; // Don't propagate the error
+    }
+    // For other errors, let them propagate normally
+    throw error;
+  },
 });
 
 type Callback = (...args: any[]) => any;

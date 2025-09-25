@@ -117,6 +117,7 @@
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
+    user-select: none;
 
     &_active {
       background-color: white;
@@ -223,5 +224,134 @@
         box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4), 0 4px 12px rgba(102, 126, 234, 0.2);
       }
     }
+  }
+
+  // Roles section styling
+  &__roles-section {
+    margin-bottom: 24px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+  }
+
+  &__section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: black;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    &::before {
+      content: "🎭";
+      font-size: 14px;
+    }
+  }
+
+  &__loading {
+    font-size: 14px;
+    color: black;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+  }
+
+  &__error {
+    font-size: 14px;
+    color: #dc2626;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  &__no-roles {
+    font-size: 14px;
+    color: black;
+    text-align: center;
+    padding: 20px;
+    font-style: italic;
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+  }
+
+  &__roles-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  &__role-item {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 16px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: #d1d5db;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      transform: translateY(-1px);
+    }
+  }
+
+  &__role-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: black;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    &::before {
+      content: "🔑";
+      font-size: 12px;
+    }
+  }
+
+  &__role-description {
+    font-size: 13px;
+    color: black;
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+
+  &__role-meta {
+    font-size: 12px;
+    color: black;
+    opacity: 0.7;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    &::before {
+      content: "📅";
+      font-size: 10px;
+    }
+  }
+
+  // Contributions section styling
+  &__contributions-section {
+    margin-bottom: 24px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+  }
+
+  &__no-contributions {
+    font-size: 14px;
+    color: black;
+    text-align: center;
+    padding: 20px;
+    font-style: italic;
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
   }
 }

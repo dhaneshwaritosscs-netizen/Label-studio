@@ -1,0 +1,146 @@
+.project-settings {
+  &__wrapper {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #ffffff;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e5e7eb;
+  }
+
+  &__title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0 0 8px 0;
+  }
+
+  &__subtitle {
+    font-size: 16px;
+    color: #6b7280;
+    margin: 0;
+  }
+
+  &__table {
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  &__table-header {
+    display: grid;
+    grid-template-columns: 80px 1fr 120px 120px 120px;
+    gap: 16px;
+    padding: 16px 20px;
+    background-color: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+  }
+
+  &__table-body {
+    max-height: 600px;
+    overflow-y: auto;
+  }
+
+  &__table-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 120px 120px 120px;
+    gap: 16px;
+    padding: 16px 20px;
+    font-size: 14px;
+    align-items: center;
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+
+    &:hover {
+      background-color: #f9fafb;
+    }
+
+    &:not(:last-child) {
+      border-bottom: 1px solid #f3f4f6;
+    }
+  }
+
+  &__project-id {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__project-color {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  &__project-name {
+    color: #2563eb;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  &__project-description {
+    font-size: 12px;
+    color: #6b7280;
+  }
+
+  &__view-button {
+    padding: 6px 12px;
+    background-color: #6366f1;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: #4f46e5;
+    }
+  }
+
+  &__empty-state {
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 60px 20px;
+    text-align: center;
+    color: #6b7280;
+  }
+
+  &__empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+
+  &__empty-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #374151;
+    margin: 0 0 8px 0;
+  }
+
+  &__empty-description {
+    font-size: 16px;
+    margin: 0;
+  }
+}

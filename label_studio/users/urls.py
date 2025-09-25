@@ -9,6 +9,8 @@ from django.views.static import serve
 from rest_framework import routers
 from users import api, views
 from users.product_tours import api as product_tours_api
+from users.role_urls import urlpatterns as role_urlpatterns
+from users.user_management_api import create_user_with_membership, delete_user_with_permission_check
 
 router = routers.DefaultRouter()
 router.register(r'users', api.UserAPI, basename='user')
@@ -24,8 +26,13 @@ urlpatterns = [
     path('api/current-user/reset-token/', api.UserResetTokenAPI.as_view(), name='current-user-reset-token'),
     path('api/current-user/token', api.UserGetTokenAPI.as_view(), name='current-user-token'),
     path('api/current-user/whoami', api.UserWhoAmIAPI.as_view(), name='current-user-whoami'),
+    # User management endpoints
+    path('api/users/create-with-membership/', create_user_with_membership, name='create-user-with-membership'),
+    path('api/users/delete/<int:user_id>/', delete_user_with_permission_check, name='delete-user-with-permission'),
     # Product tours
     path('api/current-user/product-tour', product_tours_api.ProductTourAPI.as_view(), name='product-tour'),
+    # Role management
+    path('', include(role_urlpatterns)),
 ]
 
 # When CLOUD_FILE_STORAGE_ENABLED is set, avatars are uploaded to cloud storage with a different URL pattern.

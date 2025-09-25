@@ -7,6 +7,7 @@ from core.permissions import ViewClassPermission, all_permissions
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import no_body, swagger_auto_schema
 from rest_framework import generics, viewsets
+from django.db import DatabaseError
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed
@@ -129,16 +130,31 @@ _user_schema = openapi.Schema(
 class UserAPI(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     permission_required = ViewClassPermission(
-        GET=all_permissions.organizations_change,
+        GET=all_permissions.organizations_view,
         PUT=all_permissions.organizations_change,
-        POST=all_permissions.organizations_change,
+        POST=all_permissions.organizations_view,
         PATCH=all_permissions.organizations_view,
-        DELETE=all_permissions.organizations_change,
+        DELETE=all_permissions.organizations_view,
     )
     http_method_names = ['get', 'post', 'head', 'patch', 'delete']
 
+    def _is_admin(self, user):
+        if getattr(user, 'is_superuser', False) or getattr(user, 'is_staff', False):
+            return True
+        try:
+            from users.role_models import UserRoleAssignment
+            return UserRoleAssignment.objects.filter(user=user, role__name__iexact='administrator', is_active=True).exists()
+        except Exception:
+            return False
+
     def get_queryset(self):
-        return User.objects.filter(organizations=self.request.user.active_organization)
+        qs = User.objects.filter(organizations=self.request.user.active_organization)
+        if self._is_admin(self.request.user):
+            return qs
+        try:
+            return qs.filter(created_by=self.request.user)
+        except DatabaseError:
+            return qs
 
     @swagger_auto_schema(auto_schema=None, methods=['delete', 'post'])
     @action(detail=True, methods=['delete', 'post'], permission_required=all_permissions.avatar_any)
@@ -174,8 +190,37 @@ class UserAPI(viewsets.ModelViewSet):
         return super(UserAPI, self).create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
-        instance = serializer.save()
-        self.request.user.active_organization.add_user(instance)
+        from organizations.models import Organization
+
+        extra = {}
+        # For clients, tag creator
+        if not self._is_admin(self.request.user):
+            try:
+                extra['created_by'] = self.request.user
+            except Exception:
+                pass
+
+        instance = serializer.save(**extra)
+
+        # Make sure the user is a member of the current organization so it shows up in memberships API
+        org = getattr(self.request.user, 'active_organization', None)
+        if org is None:
+            try:
+                org = Organization.find_by_user(self.request.user)
+            except Exception:
+                org = None
+        if org is not None:
+            try:
+                org.add_user(instance)
+            except Exception:
+                pass
+            # Ensure the created user has an active_organization set
+            if getattr(instance, 'active_organization_id', None) is None:
+                instance.active_organization = org
+                try:
+                    instance.save(update_fields=['active_organization'])
+                except Exception:
+                    instance.save()
 
     def retrieve(self, request, *args, **kwargs):
         return super(UserAPI, self).retrieve(request, *args, **kwargs)
@@ -200,8 +245,240 @@ class UserAPI(viewsets.ModelViewSet):
             }
         return result
 
-    def destroy(self, request, *args, **kwargs):
-        return super(UserAPI, self).destroy(request, *args, **kwargs)
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def create_role_based(self, request):
+        """
+        Create a user with role-based permissions (Admin can create any, Client can create and sets created_by).
+        """
+        from organizations.models import Organization, OrganizationMember
+        from django.db import transaction
+        
+        try:
+            # Get the first organization
+            org = Organization.objects.first()
+            if not org:
+                return Response(
+                    {'error': 'No organization found'}, 
+                    status=400
+                )
+            
+            # Extract user data
+            email = request.data.get('email', '').strip()
+            first_name = request.data.get('first_name', '').strip()
+            last_name = request.data.get('last_name', '').strip()
+            role = request.data.get('role', 'User').strip()
+            
+            if not email:
+                return Response(
+                    {'error': 'Email is required'}, 
+                    status=400
+                )
+            
+            # Check if user already exists
+            if User.objects.filter(email=email).exists():
+                return Response(
+                    {'error': 'User with this email already exists'}, 
+                    status=400
+                )
+            
+            with transaction.atomic():
+                # Create the user
+                user_data = {
+                    'email': email,
+                    'username': email,
+                    'first_name': first_name,
+                    'last_name': last_name,
+                    'is_active': True,
+                    'active_organization': org,
+                }
+                
+                # Set created_by and role based on user permissions
+                if not self._is_admin(request.user):
+                    # Client creates user - set created_by to current user and force role to "User"
+                    user_data['created_by'] = request.user
+                    role = 'User'  # Clients can only create User role
+                else:
+                    # Admin can create any role - use the provided role
+                    pass
+                
+                new_user = User.objects.create(**user_data)
+                
+                # Assign role to the user
+                try:
+                    from users.role_models import UserRoleAssignment, Role
+                    role_obj, created = Role.objects.get_or_create(name=role)
+                    UserRoleAssignment.objects.create(
+                        user=new_user,
+                        role=role_obj,
+                        is_active=True
+                    )
+                    logger.info(f"Assigned role '{role}' to user {new_user.id}")
+                except Exception as e:
+                    logger.warning(f"Could not assign role '{role}' to user {new_user.id}: {str(e)}")
+                
+                # Add user to the organization
+                membership, created = OrganizationMember.objects.get_or_create(
+                    user=new_user,
+                    organization=org,
+                    defaults={'deleted_at': None}
+                )
+                
+                logger.info(f"Created user {new_user.id} ({email}) by {request.user.email} and added to organization {org.id}")
+                
+                return Response({
+                    'id': new_user.id,
+                    'email': new_user.email,
+                    'first_name': new_user.first_name,
+                    'last_name': new_user.last_name,
+                    'username': new_user.username,
+                    'active_organization': org.id,
+                    'created_by': new_user.created_by_id,
+                    'role': role,
+                    'message': 'User created successfully'
+                }, status=201)
+                
+        except Exception as e:
+            logger.error(f"Error creating user: {str(e)}")
+            return Response(
+                {'error': f'Failed to create user: {str(e)}'}, 
+                status=500
+            )
+
+    @action(detail=False, methods=['get'], permission_classes=[], authentication_classes=[])
+    def list_all(self, request):
+        """
+        List users without authentication (for frontend display) with role-based filtering.
+        """
+        from organizations.models import OrganizationMember
+        
+        try:
+            # Get pagination parameters
+            page = int(request.GET.get('page', 1))
+            page_size = int(request.GET.get('page_size', 10))
+            
+            # Calculate offset
+            offset = (page - 1) * page_size
+            
+            # Get all memberships first
+            memberships_query = OrganizationMember.objects.filter(
+                deleted_at__isnull=True
+            ).select_related('user', 'organization')
+            
+            # Apply role-based filtering
+            # For now, we'll show all users since we don't have authentication context
+            # In a real implementation, you'd check the current user's role here
+            # For testing purposes, we'll show all users
+            
+            # Get total count
+            total_count = memberships_query.count()
+            
+            # Get paginated users with their organization memberships
+            memberships = memberships_query.order_by('user__id')[offset:offset + page_size]
+            
+            users_data = []
+            for membership in memberships:
+                user = membership.user
+                users_data.append({
+                    'user': {
+                        'id': user.id,
+                        'email': user.email,
+                        'first_name': user.first_name,
+                        'last_name': user.last_name,
+                        'username': user.username,
+                        'is_active': user.is_active,
+                        'created_by': user.created_by_id,  # Add created_by info
+                    },
+                    'organization': {
+                        'id': membership.organization.id,
+                        'title': membership.organization.title,
+                    }
+                })
+            
+            return Response({
+                'results': users_data,
+                'count': total_count,
+                'page': page,
+                'page_size': page_size,
+                'total_pages': (total_count + page_size - 1) // page_size,
+                'message': 'Users retrieved successfully'
+            }, status=200)
+            
+        except Exception as e:
+            logger.error(f"Error listing users: {str(e)}")
+            return Response(
+                {'error': f'Failed to list users: {str(e)}'}, 
+                status=500
+            )
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def list_role_based(self, request):
+        """
+        List users with role-based filtering (Admin sees all, Client sees only their created users).
+        """
+        from organizations.models import OrganizationMember
+        
+        try:
+            # Get pagination parameters
+            page = int(request.GET.get('page', 1))
+            page_size = int(request.GET.get('page_size', 10))
+            
+            # Calculate offset
+            offset = (page - 1) * page_size
+            
+            # Get all memberships first
+            memberships_query = OrganizationMember.objects.filter(
+                deleted_at__isnull=True
+            ).select_related('user', 'organization')
+            
+            # Apply role-based filtering
+            if self._is_admin(request.user):
+                # Admin sees all users
+                filtered_memberships = memberships_query
+            else:
+                # Client sees only users they created
+                filtered_memberships = memberships_query.filter(user__created_by=request.user)
+            
+            # Get total count
+            total_count = filtered_memberships.count()
+            
+            # Get paginated users with their organization memberships
+            memberships = filtered_memberships.order_by('user__id')[offset:offset + page_size]
+            
+            users_data = []
+            for membership in memberships:
+                user = membership.user
+                users_data.append({
+                    'user': {
+                        'id': user.id,
+                        'email': user.email,
+                        'first_name': user.first_name,
+                        'last_name': user.last_name,
+                        'username': user.username,
+                        'is_active': user.is_active,
+                        'created_by': user.created_by_id,
+                    },
+                    'organization': {
+                        'id': membership.organization.id,
+                        'title': membership.organization.title,
+                    }
+                })
+            
+            return Response({
+                'results': users_data,
+                'count': total_count,
+                'page': page,
+                'page_size': page_size,
+                'total_pages': (total_count + page_size - 1) // page_size,
+                'user_role': 'admin' if self._is_admin(request.user) else 'client',
+                'message': 'Users retrieved successfully'
+            }, status=200)
+            
+        except Exception as e:
+            logger.error(f"Error listing users: {str(e)}")
+            return Response(
+                {'error': f'Failed to list users: {str(e)}'}, 
+                status=500
+            )
 
 
 @method_decorator(

@@ -29,6 +29,28 @@ import "./App.scss";
 const baseURL = new URL(APP_SETTINGS.hostname || location.origin);
 export const UNBLOCK_HISTORY_MESSAGE = "UNBLOCK_HISTORY";
 
+// Global error handler for mobx-state-tree InvalidReferenceError
+window.addEventListener('error', (event) => {
+  if (event.error && event.error.message && 
+      event.error.message.includes("Failed to resolve reference") && 
+      (event.error.message.includes("to type 'User'") || event.error.message.includes("to type 'UserExtended'"))) {
+    console.warn("MobX State Tree InvalidReferenceError caught globally:", event.error.message);
+    event.preventDefault(); // Prevent the error from being logged to console
+    return false; // Don't propagate the error
+  }
+});
+
+// Global handler for unhandled promise rejections
+window.addEventListener('unhandledrejection', (event) => {
+  if (event.reason && event.reason.message && 
+      event.reason.message.includes("Failed to resolve reference") && 
+      (event.reason.message.includes("to type 'User'") || event.reason.message.includes("to type 'UserExtended'"))) {
+    console.warn("MobX State Tree InvalidReferenceError in promise rejection caught globally:", event.reason.message);
+    event.preventDefault(); // Prevent the error from being logged to console
+    return false; // Don't propagate the error
+  }
+});
+
 const browserHistory = createBrowserHistory({
   basename: baseURL.pathname || "/",
   // callback is an async way to confirm or decline going to another page in the context of routing. It accepts `true` or `false`

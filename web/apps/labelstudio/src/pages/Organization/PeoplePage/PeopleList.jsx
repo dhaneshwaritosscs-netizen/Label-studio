@@ -4,6 +4,7 @@ import { Userpic } from "@humansignal/ui";
 import { Pagination } from "../../../components";
 import { usePage, usePageSize } from "../../../components/Pagination/Pagination";
 import { useAPI } from "../../../providers/ApiProvider";
+import { useCurrentUser } from "../../../providers/CurrentUser";
 import { Block, Elem } from "../../../utils/bem";
 import { isDefined } from "../../../utils/helpers";
 import "./PeopleList.scss";
@@ -11,6 +12,7 @@ import { CopyableTooltip } from "../../../components/CopyableTooltip/CopyableToo
 
 export const PeopleList = ({ onSelect, selectedUser, defaultSelected }) => {
   const api = useAPI();
+  const { user } = useCurrentUser();
   const [usersList, setUsersList] = useState();
   const [currentPage] = usePage("page", 1);
   const [currentPageSize] = usePageSize("page_size", 30);
@@ -19,10 +21,10 @@ export const PeopleList = ({ onSelect, selectedUser, defaultSelected }) => {
   console.log({ currentPage, currentPageSize });
 
   const fetchUsers = useCallback(async (page, pageSize) => {
+    const orgId = user?.active_organization?.id || 1;
     const response = await api.callApi("memberships", {
       params: {
-        pk: 1,
-        contributed_to_projects: 1,
+        pk: orgId,
         page,
         page_size: pageSize,
       },

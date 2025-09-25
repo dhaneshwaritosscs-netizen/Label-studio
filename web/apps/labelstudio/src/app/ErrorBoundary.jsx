@@ -11,6 +11,29 @@ export default class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false };
+    
+    // Add global error handler for unhandled promise rejections
+    this.handleUnhandledRejection = this.handleUnhandledRejection.bind(this);
+    window.addEventListener('unhandledrejection', this.handleUnhandledRejection);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('unhandledrejection', this.handleUnhandledRejection);
+  }
+
+  handleUnhandledRejection(event) {
+    const error = event.reason;
+    if (error && error.message && error.message.includes("Failed to resolve reference") && (error.message.includes("to type 'User'") || error.message.includes("to type 'UserExtended'"))) {
+      console.warn("MobX State Tree InvalidReferenceError in promise rejection:", error.message);
+      // Prevent the default behavior (logging to console)
+      event.preventDefault();
+      // Log to Sentry but don't crash the app
+      captureException(error, {
+        extra: {
+          error_type: "mobx_invalid_reference_promise",
+        },
+      });
+    }
   }
 
   static getDerivedStateFromError(error) {
@@ -19,6 +42,21 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, { componentStack }) {
+    // Handle mobx-state-tree InvalidReferenceError gracefully
+    if (error.message && error.message.includes("Failed to resolve reference") && (error.message.includes("to type 'User'") || error.message.includes("to type 'UserExtended'"))) {
+      console.warn("MobX State Tree InvalidReferenceError detected:", error.message);
+      // Don't show error modal for this specific error, just log it
+      captureException(error, {
+        extra: {
+          component_stacktrace: componentStack,
+          error_type: "mobx_invalid_reference",
+        },
+      });
+      // Reset error state to continue normal operation
+      this.setState({ hasError: false, error: null, errorInfo: null });
+      return;
+    }
+
     // Capture the error in Sentry, so we can fix it directly
     // Don't make the users copy and paste the stacktrace, it's not actionable
     captureException(error, {

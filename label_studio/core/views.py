@@ -62,6 +62,11 @@ def main(request):
     return redirect(reverse('user-login'))
 
 
+def spa_view(request):
+    """Serve the React SPA for client-side routes"""
+    return render(request, 'base.html')
+
+
 def version_page(request):
     """Get platform version"""
     # update the latest version from pypi response

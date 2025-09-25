@@ -135,21 +135,227 @@ export const ProjectsList = ({ projects, pageSize }) => {
           {filteredProjects.length > ROWS_PER_PAGE && (
             <Elem
               name="pages"
-              style={{ marginTop: "20px", display: "flex", justifyContent: "center", gap: "5px" }}
+              style={{ 
+                marginTop: "30px", 
+                display: "flex", 
+                justifyContent: "center", 
+                alignItems: "center",
+                gap: "8px",
+                flexWrap: "wrap"
+              }}
             >
-              {Array.from({ length: Math.ceil(filteredProjects.length / ROWS_PER_PAGE) }).map((_, index) => (
-                <div
-                  key={index}
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    background: index === currentPage ? "#374151" : "#d1d5db",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => setCurrentPage(index)}
-                />
-              ))}
+              {/* Previous Button */}
+              <button
+                onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
+                disabled={currentPage === 0}
+                style={{
+                  padding: "8px 12px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "6px",
+                  background: currentPage === 0 ? "#f9fafb" : "#ffffff",
+                  color: currentPage === 0 ? "#9ca3af" : "#374151",
+                  cursor: currentPage === 0 ? "not-allowed" : "pointer",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  transition: "all 0.2s ease",
+                  opacity: currentPage === 0 ? 0.5 : 1,
+                }}
+                onMouseEnter={(e) => {
+                  if (currentPage !== 0) {
+                    e.currentTarget.style.background = "#f3f4f6";
+                    e.currentTarget.style.borderColor = "#9ca3af";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentPage !== 0) {
+                    e.currentTarget.style.background = "#ffffff";
+                    e.currentTarget.style.borderColor = "#d1d5db";
+                  }
+                }}
+              >
+                Previous
+              </button>
+
+              {/* Page Numbers */}
+              {(() => {
+                const totalPages = Math.ceil(filteredProjects.length / ROWS_PER_PAGE);
+                const pages = [];
+                
+                // Show first page
+                if (totalPages > 0) {
+                  pages.push(
+                    <button
+                      key={0}
+                      onClick={() => setCurrentPage(0)}
+                      style={{
+                        padding: "8px 12px",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "6px",
+                        background: currentPage === 0 ? "#374151" : "#ffffff",
+                        color: currentPage === 0 ? "#ffffff" : "#374151",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                        fontWeight: "500",
+                        transition: "all 0.2s ease",
+                        minWidth: "40px",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (currentPage !== 0) {
+                          e.currentTarget.style.background = "#f3f4f6";
+                          e.currentTarget.style.borderColor = "#9ca3af";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (currentPage !== 0) {
+                          e.currentTarget.style.background = "#ffffff";
+                          e.currentTarget.style.borderColor = "#d1d5db";
+                        }
+                      }}
+                    >
+                      1
+                    </button>
+                  );
+                }
+
+                // Show ellipsis if needed
+                if (currentPage > 3) {
+                  pages.push(
+                    <span key="ellipsis1" style={{ padding: "0 8px", color: "#6b7280" }}>
+                      ...
+                    </span>
+                  );
+                }
+
+                // Show pages around current page
+                const startPage = Math.max(1, currentPage - 1);
+                const endPage = Math.min(totalPages - 1, currentPage + 1);
+                
+                for (let i = startPage; i <= endPage; i++) {
+                  if (i !== 0 && i !== totalPages - 1) {
+                    pages.push(
+                      <button
+                        key={i}
+                        onClick={() => setCurrentPage(i)}
+                        style={{
+                          padding: "8px 12px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "6px",
+                          background: currentPage === i ? "#374151" : "#ffffff",
+                          color: currentPage === i ? "#ffffff" : "#374151",
+                          cursor: "pointer",
+                          fontSize: "14px",
+                          fontWeight: "500",
+                          transition: "all 0.2s ease",
+                          minWidth: "40px",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (currentPage !== i) {
+                            e.currentTarget.style.background = "#f3f4f6";
+                            e.currentTarget.style.borderColor = "#9ca3af";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (currentPage !== i) {
+                            e.currentTarget.style.background = "#ffffff";
+                            e.currentTarget.style.borderColor = "#d1d5db";
+                          }
+                        }}
+                      >
+                        {i + 1}
+                      </button>
+                    );
+                  }
+                }
+
+                // Show ellipsis if needed
+                if (currentPage < totalPages - 4) {
+                  pages.push(
+                    <span key="ellipsis2" style={{ padding: "0 8px", color: "#6b7280" }}>
+                      ...
+                    </span>
+                  );
+                }
+
+                // Show last page
+                if (totalPages > 1) {
+                  pages.push(
+                    <button
+                      key={totalPages - 1}
+                      onClick={() => setCurrentPage(totalPages - 1)}
+                      style={{
+                        padding: "8px 12px",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "6px",
+                        background: currentPage === totalPages - 1 ? "#374151" : "#ffffff",
+                        color: currentPage === totalPages - 1 ? "#ffffff" : "#374151",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                        fontWeight: "500",
+                        transition: "all 0.2s ease",
+                        minWidth: "40px",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (currentPage !== totalPages - 1) {
+                          e.currentTarget.style.background = "#f3f4f6";
+                          e.currentTarget.style.borderColor = "#9ca3af";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (currentPage !== totalPages - 1) {
+                          e.currentTarget.style.background = "#ffffff";
+                          e.currentTarget.style.borderColor = "#d1d5db";
+                        }
+                      }}
+                    >
+                      {totalPages}
+                    </button>
+                  );
+                }
+
+                return pages;
+              })()}
+
+              {/* Next Button */}
+              <button
+                onClick={() => setCurrentPage(Math.min(Math.ceil(filteredProjects.length / ROWS_PER_PAGE) - 1, currentPage + 1))}
+                disabled={currentPage === Math.ceil(filteredProjects.length / ROWS_PER_PAGE) - 1}
+                style={{
+                  padding: "8px 12px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "6px",
+                  background: currentPage === Math.ceil(filteredProjects.length / ROWS_PER_PAGE) - 1 ? "#f9fafb" : "#ffffff",
+                  color: currentPage === Math.ceil(filteredProjects.length / ROWS_PER_PAGE) - 1 ? "#9ca3af" : "#374151",
+                  cursor: currentPage === Math.ceil(filteredProjects.length / ROWS_PER_PAGE) - 1 ? "not-allowed" : "pointer",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  transition: "all 0.2s ease",
+                  opacity: currentPage === Math.ceil(filteredProjects.length / ROWS_PER_PAGE) - 1 ? 0.5 : 1,
+                }}
+                onMouseEnter={(e) => {
+                  if (currentPage !== Math.ceil(filteredProjects.length / ROWS_PER_PAGE) - 1) {
+                    e.currentTarget.style.background = "#f3f4f6";
+                    e.currentTarget.style.borderColor = "#9ca3af";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentPage !== Math.ceil(filteredProjects.length / ROWS_PER_PAGE) - 1) {
+                    e.currentTarget.style.background = "#ffffff";
+                    e.currentTarget.style.borderColor = "#d1d5db";
+                  }
+                }}
+              >
+                Next
+              </button>
+
+              {/* Page Info */}
+              <div style={{
+                marginLeft: "16px",
+                fontSize: "14px",
+                color: "#6b7280",
+                fontWeight: "500",
+              }}>
+                Page {currentPage + 1} of {Math.ceil(filteredProjects.length / ROWS_PER_PAGE)}
+              </div>
             </Elem>
           )}
         </div>

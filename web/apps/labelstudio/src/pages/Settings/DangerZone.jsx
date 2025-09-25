@@ -6,12 +6,77 @@ import { confirm } from "../../components/Modal/Modal";
 import { useAPI } from "../../providers/ApiProvider";
 import { useProject } from "../../providers/ProjectProvider";
 import { cn } from "../../utils/bem";
+import { useUserRoles } from "../../hooks/useUserRoles";
+import { Block, Elem } from "../../utils/bem";
+import "./access-denied.scss";
 
 export const DangerZone = () => {
   const { project } = useProject();
   const api = useAPI();
   const history = useHistory();
   const [processing, setProcessing] = useState(null);
+  const { hasRole, loadingRoles } = useUserRoles();
+
+  // All hooks must be called before any conditional returns
+  const buttons = useMemo(
+    () => [
+      {
+        type: "annotations",
+        disabled: true, //&& !project.total_annotations_number,
+        label: `Delete ${project.total_annotations_number} Annotations`,
+      },
+      {
+        type: "tasks",
+        disabled: true, //&& !project.task_number,
+        label: `Delete ${project.task_number} Tasks`,
+      },
+      {
+        type: "predictions",
+        disabled: true, //&& !project.total_predictions_number,
+        label: `Delete ${project.total_predictions_number} Predictions`,
+      },
+      {
+        type: "reset_cache",
+        help:
+          "Reset Cache may help in cases like if you are unable to modify the labeling configuration due " +
+          "to validation errors concerning existing labels, but you are confident that the labels don't exist. You can " +
+          "use this action to reset the cache and try again.",
+        label: "Reset Cache",
+      },
+      {
+        type: "tabs",
+        help: "If the Data Manager is not loading, dropping all Data Manager tabs can help.",
+        label: "Drop All Tabs",
+      },
+      {
+        type: "project",
+        help: "Deleting a project removes all tasks, annotations, and project data from the database.",
+        label: "Delete Project",
+      },
+    ],
+    [project],
+  );
+
+  // Check if user has danger-zone role
+  if (loadingRoles) {
+    return (
+      <Block name="danger-zone">
+        <Elem name="loading">Loading...</Elem>
+      </Block>
+    );
+  }
+
+  if (!hasRole('danger-zone')) {
+    return (
+      <Block name="danger-zone">
+        <Elem name="access-denied">
+          <h1>Access Denied</h1>
+          <p>You don't have permission to access Danger Zone settings.</p>
+          <p>Contact your administrator to request the 'danger-zone' role.</p>
+        </Elem>
+      </Block>
+    );
+  }
 
   const handleOnClick = (type) => () => {
     confirm({
@@ -51,45 +116,6 @@ export const DangerZone = () => {
       },
     });
   };
-
-  const buttons = useMemo(
-    () => [
-      {
-        type: "annotations",
-        disabled: true, //&& !project.total_annotations_number,
-        label: `Delete ${project.total_annotations_number} Annotations`,
-      },
-      {
-        type: "tasks",
-        disabled: true, //&& !project.task_number,
-        label: `Delete ${project.task_number} Tasks`,
-      },
-      {
-        type: "predictions",
-        disabled: true, //&& !project.total_predictions_number,
-        label: `Delete ${project.total_predictions_number} Predictions`,
-      },
-      {
-        type: "reset_cache",
-        help:
-          "Reset Cache may help in cases like if you are unable to modify the labeling configuration due " +
-          "to validation errors concerning existing labels, but you are confident that the labels don't exist. You can " +
-          "use this action to reset the cache and try again.",
-        label: "Reset Cache",
-      },
-      {
-        type: "tabs",
-        help: "If the Data Manager is not loading, dropping all Data Manager tabs can help.",
-        label: "Drop All Tabs",
-      },
-      {
-        type: "project",
-        help: "Deleting a project removes all tasks, annotations, and project data from the database.",
-        label: "Delete Project",
-      },
-    ],
-    [project],
-  );
 
   return (
     <div className={cn("simple-settings")}>

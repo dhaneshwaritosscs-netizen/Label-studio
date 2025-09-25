@@ -1,0 +1,49 @@
+.projects-overview-page {
+  .tab-button {
+    transition: all 0.2s ease;
+    
+    &:hover {
+      color: #1a1a1a !important;
+    }
+  }
+  
+  .action-button {
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: translateY(-1px);
+    }
+  }
+  
+  .table-row {
+    transition: background-color 0.2s ease;
+    
+    &:hover {
+      background-color: #f9fafb;
+    }
+  }
+  
+  .project-type-badge {
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: scale(1.05);
+    }
+  }
+  
+  .sort-header {
+    transition: color 0.2s ease;
+    
+    &:hover {
+      color: #1a1a1a;
+    }
+  }
+  
+  .back-button {
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: translateX(-2px);
+    }
+  }
+}

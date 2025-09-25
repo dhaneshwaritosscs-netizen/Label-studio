@@ -23,6 +23,23 @@ import { CommentStore } from "../Comment/CommentStore";
 import RegionStore from "../RegionStore";
 import RelationStore from "../RelationStore";
 import { UserExtended } from "../UserStore";
+
+// Custom safe reference type that handles missing references gracefully
+const safeUserExtendedReference = types.maybeNull(
+  types.reference(UserExtended, {
+    get(identifier, parent) {
+      try {
+        return parent.root?.users?.find(user => user.id === identifier) || null;
+      } catch (error) {
+        console.warn("Failed to resolve UserExtended reference:", identifier, error.message);
+        return null;
+      }
+    },
+    set(value) {
+      return value?.id || null;
+    }
+  })
+);
 import { LinkingModes } from "./LinkingModes";
 
 const hotkeys = Hotkey("Annotations", "Annotations");
@@ -109,7 +126,7 @@ const _Annotation = types
     createdDate: types.optional(types.string, Utils.UDate.currentISODate()),
     createdAgo: types.maybeNull(types.string),
     createdBy: types.optional(types.string, "Admin"),
-    user: types.optional(types.maybeNull(types.safeReference(UserExtended)), null),
+    user: types.optional(safeUserExtendedReference, null),
     score: types.maybeNull(types.number),
 
     parent_prediction: types.maybeNull(types.integer),
@@ -228,6 +245,15 @@ const _Annotation = types
 
     get list() {
       return getParent(self, 2);
+    },
+
+    get safeUser() {
+      try {
+        return self.user;
+      } catch (error) {
+        console.warn("Failed to access user reference:", error.message);
+        return null;
+      }
     },
 
     get objects() {

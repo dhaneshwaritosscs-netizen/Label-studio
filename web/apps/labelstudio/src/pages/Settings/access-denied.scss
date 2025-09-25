@@ -1,0 +1,36 @@
+.access-denied {
+  padding: 40px;
+  text-align: center;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin: 20px;
+  border: 1px solid #e9ecef;
+
+  h1 {
+    color: #dc3545;
+    margin-bottom: 16px;
+    font-size: 24px;
+    font-weight: 600;
+  }
+
+  p {
+    color: #6c757d;
+    margin-bottom: 12px;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  p:last-child {
+    margin-bottom: 0;
+    font-weight: 500;
+    color: #495057;
+  }
+}
+
+.loading {
+  padding: 40px;
+  text-align: center;
+  color: #6c757d;
+  font-size: 16px;
+}
+

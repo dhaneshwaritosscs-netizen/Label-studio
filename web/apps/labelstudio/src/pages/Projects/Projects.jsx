@@ -1,10 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams as useRouterParams } from "react-router";
 import { Redirect } from "react-router-dom";
 import { Button } from "../../components";
 import { Oneof } from "../../components/Oneof/Oneof";
 import { ApiContext } from "../../providers/ApiProvider";
 import { useContextProps } from "../../providers/RoutesProvider";
+import { useUserRoles } from "../../hooks/useUserRoles";
+import { useCurrentUser } from "../../providers/CurrentUser";
 import { Block, Elem } from "../../utils/bem";
 import { CreateProject } from "../CreateProject/CreateProject";
 import { DataManagerPage } from "../DataManager/DataManager";
@@ -22,75 +24,161 @@ const getCurrentPage = () => {
 export const ProjectsPage = () => {
   const api = React.useContext(ApiContext);
   const abortController = useAbortController();
+  const { hasRole, userRoles, loadingRoles } = useUserRoles();
+  const { user: currentUser } = useCurrentUser();
   const [projectsList, setProjectsList] = React.useState([]);
   const [currentPage, setCurrentPage] = useState(getCurrentPage());
   const [totalItems, setTotalItems] = useState(1);
+  const [userProjectAssignments, setUserProjectAssignments] = useState({});
   const setContextProps = useContextProps();
   const defaultPageSize = Number.parseInt(localStorage.getItem("pages:projects-list") ?? 30);
 
   const [modal, setModal] = React.useState(false);
 
+  // Check if user is admin or client
+  const isAdmin = hasRole('admin') || currentUser?.email === 'dhaneshwari.tosscss@gmail.com';
+  const isClient = !isAdmin; // If not admin, consider as client
+
+  // Debug user roles
+  console.log("User roles:", userRoles);
+  console.log("Loading roles:", loadingRoles);
+  console.log("Is admin:", isAdmin);
+  console.log("Is client:", isClient);
+
   const openModal = () => setModal(true);
 
   const closeModal = () => setModal(false);
 
+  // Load user project assignments from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('userProjectAssignments');
+
+      if (saved) {
+        setUserProjectAssignments(JSON.parse(saved));
+      }
+    } catch (error) {
+      console.error('Error loading user project assignments:', error);
+    }
+  }, []);
+
   const fetchProjects = async (page = currentPage, pageSize = defaultPageSize) => {
-    abortController.renew(); // Cancel any in flight requests
+    try {
+      abortController.renew(); // Cancel any in flight requests
 
-    const requestParams = { page, page_size: pageSize };
+      console.log("User role check - isAdmin:", isAdmin, "isClient:", isClient);
+      console.log("Current user:", currentUser);
 
-    requestParams.include = [
-      "id",
-      "title",
-      "created_by",
-      "created_at",
-      "color",
-      "is_published",
-      "assignment_settings",
-    ].join(",");
+      const requestParams = { page, page_size: pageSize };
+      
+      // For admin, increase page size to ensure we get all their projects
+      if (isAdmin) {
+        requestParams.page_size = 1000; // Large page size to get all admin projects
+        console.log("Admin user detected, fetching projects created by:", currentUser.id);
+      }
 
-    const data = await api.callApi("projects", {
-      params: requestParams,
-      signal: abortController.controller.current.signal,
-      errorFilter: (e) => e.error.includes("aborted"),
-    });
+      requestParams.include = [
+        "id",
+        "title",
+        "created_by",
+        "created_at",
+        "color",
+        "is_published",
+        "assignment_settings",
+      ].join(",");
 
-    setTotalItems(data?.count ?? 1);
-    setProjectsList(data.results ?? []);
+      // For admin users, fetch only projects created by them
+      if (isAdmin) {
+        requestParams.created_by = currentUser.id;
+        requestParams.show_all = true; // Ensure we get all projects created by admin
+        console.log("Fetching projects for admin user ID:", currentUser.id);
+      } else {
+        // For debugging, let's see what happens if we fetch all projects
+        console.log("Fetching all projects for debugging");
+        requestParams.show_all = true;
+      }
 
-    if (data?.results?.length) {
-      const additionalData = await api.callApi("projects", {
-        params: {
-          ids: data?.results?.map(({ id }) => id).join(","),
-          include: [
-            "id",
-            "description",
-            "num_tasks_with_annotations",
-            "task_number",
-            "skipped_annotations_number",
-            "total_annotations_number",
-            "total_predictions_number",
-            "ground_truth_number",
-            "finished_task_number",
-          ].join(","),
-          page_size: pageSize,
-        },
+      const data = await api.callApi("projects", {
+        params: requestParams,
         signal: abortController.controller.current.signal,
         errorFilter: (e) => e.error.includes("aborted"),
       });
 
-      if (additionalData?.results?.length) {
-        setProjectsList((prev) =>
-          additionalData.results.map((project) => {
-            const prevProject = prev.find(({ id }) => id === project.id);
+      console.log("API response:", data);
+      console.log("Request params:", requestParams);
 
-            return {
-              ...prevProject,
-              ...project,
-            };
-          }),
-        );
+    // Filter projects based on user role and assignments
+    let filteredProjects = (data && data.results) ? data.results : [];
+    
+    if (currentUser) {
+      if (isAdmin) {
+        // Admin sees only projects they created (already filtered by backend)
+        console.log("Admin projects from backend:", filteredProjects.length);
+      } else {
+        // Client sees only assigned projects
+        const currentUserAssignments = userProjectAssignments[currentUser.id] || [];
+        console.log("Current user ID:", currentUser.id);
+        console.log("User assignments:", currentUserAssignments);
+        console.log("All projects:", filteredProjects.length);
+        
+        if (currentUserAssignments.length > 0) {
+          filteredProjects = filteredProjects.filter(project => 
+            currentUserAssignments.includes(project.id)
+          );
+          console.log("Filtered projects:", filteredProjects.length);
+        } else {
+          console.log("No assignments found, showing empty list");
+          filteredProjects = [];
+        }
       }
+    }
+
+    setTotalItems(filteredProjects.length);
+    setProjectsList(filteredProjects);
+
+    if (filteredProjects.length > 0) {
+      try {
+        const additionalData = await api.callApi("projects", {
+          params: {
+            ids: filteredProjects.map(({ id }) => id).join(","),
+            include: [
+              "id",
+              "description",
+              "num_tasks_with_annotations",
+              "task_number",
+              "skipped_annotations_number",
+              "total_annotations_number",
+              "total_predictions_number",
+              "ground_truth_number",
+              "finished_task_number",
+            ].join(","),
+            page_size: pageSize,
+          },
+          signal: abortController.controller.current.signal,
+          errorFilter: (e) => e.error.includes("aborted"),
+        });
+
+        if (additionalData && additionalData.results && additionalData.results.length > 0) {
+          setProjectsList((prev) =>
+            additionalData.results.map((project) => {
+              const prevProject = prev.find(({ id }) => id === project.id);
+
+              return {
+                ...prevProject,
+                ...project,
+              };
+            }),
+          );
+        }
+      } catch (additionalError) {
+        console.error("Error fetching additional project data:", additionalError);
+        // Continue with basic project data even if additional data fails
+      }
+    }
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+      setTotalItems(0);
+      setProjectsList([]);
     }
   };
 
@@ -100,15 +188,26 @@ export const ProjectsPage = () => {
   };
 
   React.useEffect(() => {
-    fetchProjects();
-  }, []);
+    // Wait for user roles to load before fetching projects
+    if (!loadingRoles && currentUser) {
+      fetchProjects();
+    }
+  }, [loadingRoles, currentUser]);
+
+  // Refetch projects when user assignments change
+  React.useEffect(() => {
+    if (currentUser && Object.keys(userProjectAssignments).length > 0) {
+      fetchProjects();
+    }
+  }, [userProjectAssignments, currentUser]);
 
   React.useEffect(() => {
     // there is a nice page with Create button when list is empty
     // so don't show the context button in that case
-    setContextProps({ openModal, showButton: projectsList.length > 0 });
-  }, [projectsList.length]);
+    setContextProps({ openModal, showButton: projectsList.length > 0 && isAdmin });
+  }, [projectsList.length, isAdmin]);
 
+  // All users see their assigned projects
   return (
     <Block name="projects-page">
       {/* Header Section without Dashboard Badge */}
@@ -131,7 +230,7 @@ export const ProjectsPage = () => {
           WebkitTextFillColor: "transparent",
           backgroundClip: "text",
         }}>
-          Manage Your Projects
+          {isAdmin ? "Your Created Projects" : "Your Assigned Projects"}
         </h1>
         <p style={{
           fontSize: "20px",
@@ -142,7 +241,7 @@ export const ProjectsPage = () => {
           marginRight: "auto",
           lineHeight: "1.6",
         }}>
-          Organize, track, and collaborate on your labeling projects with powerful tools and insights
+          {isAdmin ? "View and manage the projects you have created" : "View and manage the projects assigned to you"}
         </p>
         <div style={{
           display: "flex",
@@ -150,33 +249,35 @@ export const ProjectsPage = () => {
           justifyContent: "center",
           flexWrap: "wrap",
         }}>
-          <Button 
-            onClick={openModal} 
-            look="primary" 
-            size="large"
-            style={{
-              background: "rgb(25 44 89)",
-              border: "none",
-              padding: "16px 32px",
-              borderRadius: "12px",
-              fontSize: "16px",
-              fontWeight: "600",
-              boxShadow: "0 8px 25px rgba(102, 126, 234, 0.3)",
-              transition: "all 0.3s ease",
-              width: "250px",
-              minWidth: "200px",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.boxShadow = "0 12px 35px rgba(102, 126, 234, 0.4)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "0 8px 25px rgba(102, 126, 234, 0.3)";
-            }}
-          >
-            ✨ Create New Project
-          </Button>
+          {isAdmin && (
+            <Button 
+              onClick={openModal} 
+              look="primary" 
+              size="large"
+              style={{
+                background: "rgb(25 44 89)",
+                border: "none",
+                padding: "16px 32px",
+                borderRadius: "12px",
+                fontSize: "16px",
+                fontWeight: "600",
+                boxShadow: "0 8px 25px rgba(102, 126, 234, 0.3)",
+                transition: "all 0.3s ease",
+                width: "250px",
+                minWidth: "200px",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = "0 12px 35px rgba(102, 126, 234, 0.4)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 8px 25px rgba(102, 126, 234, 0.3)";
+              }}
+            >
+              ✨ Create New Project
+            </Button>
+          )}
           <Button 
             look="secondary" 
             size="large"

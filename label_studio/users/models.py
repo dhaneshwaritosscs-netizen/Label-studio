@@ -113,6 +113,11 @@ class User(UserMixin, AbstractBaseUser, PermissionsMixin, UserLastActivityMixin)
         _('allow newsletters'), null=True, default=None, help_text=_('Allow sending newsletters to user')
     )
 
+    # Track who created this user (for client-created users access control)
+    created_by = models.ForeignKey(
+        'users.User', null=True, blank=True, on_delete=models.SET_NULL, related_name='created_users'
+    )
+
     objects = UserManager()
 
     EMAIL_FIELD = 'email'

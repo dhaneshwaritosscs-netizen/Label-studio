@@ -4,6 +4,9 @@ import { useProject } from "../../providers/ProjectProvider";
 import { FF_UNSAVED_CHANGES, isFF } from "../../utils/feature-flags";
 import { isEmptyString } from "../../utils/helpers";
 import { ConfigPage } from "../CreateProject/Config/Config";
+import { useUserRoles } from "../../hooks/useUserRoles";
+import { Block, Elem } from "../../utils/bem";
+import "./access-denied.scss";
 
 export const LabelingSettings = () => {
   const { project, fetchProject, updateProject } = useProject();
@@ -11,7 +14,9 @@ export const LabelingSettings = () => {
   const [essentialDataChanged, setEssentialDataChanged] = useState(false);
   const hasChanges = isFF(FF_UNSAVED_CHANGES) && config !== project.label_config;
   const api = useAPI();
+  const { hasRole, loadingRoles } = useUserRoles();
 
+  // All hooks must be called before any conditional returns
   const saveConfig = useCallback(
     isFF(FF_UNSAVED_CHANGES)
       ? async () => {
@@ -74,6 +79,27 @@ export const LabelingSettings = () => {
   const onValidate = useCallback((validation) => {
     setEssentialDataChanged(validation.config_essential_data_has_changed);
   }, []);
+
+  // Check if user has labeling-interface role
+  if (loadingRoles) {
+    return (
+      <Block name="labeling-settings">
+        <Elem name="loading">Loading...</Elem>
+      </Block>
+    );
+  }
+
+  if (!hasRole('labeling-interface')) {
+    return (
+      <Block name="labeling-settings">
+        <Elem name="access-denied">
+          <h1>Access Denied</h1>
+          <p>You don't have permission to access Labeling Interface settings.</p>
+          <p>Contact your administrator to request the 'labeling-interface' role.</p>
+        </Elem>
+      </Block>
+    );
+  }
 
   if (!project.id) return null;
 

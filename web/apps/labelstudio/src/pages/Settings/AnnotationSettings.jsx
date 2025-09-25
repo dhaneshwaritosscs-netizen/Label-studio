@@ -7,12 +7,15 @@ import { Block, Elem } from "../../utils/bem";
 import { ModelVersionSelector } from "./AnnotationSettings/ModelVersionSelector";
 import { ProjectContext } from "../../providers/ProjectProvider";
 import { Divider } from "../../components/Divider/Divider";
+import { useUserRoles } from "../../hooks/useUserRoles";
+import "./access-denied.scss";
 
 export const AnnotationSettings = () => {
   const { project, fetchProject } = useContext(ProjectContext);
   const pageContext = useContext(MenubarContext);
   const formRef = useRef();
   const [collab, setCollab] = useState(null);
+  const { hasRole, loadingRoles } = useUserRoles();
 
   useEffect(() => {
     pageContext.setProps({ formRef });
@@ -21,6 +24,27 @@ export const AnnotationSettings = () => {
   const updateProject = useCallback(() => {
     fetchProject(project.id, true);
   }, [project]);
+
+  // Check if user has annotation role
+  if (loadingRoles) {
+    return (
+      <Block name="annotation-settings">
+        <Elem name="loading">Loading...</Elem>
+      </Block>
+    );
+  }
+
+  if (!hasRole('annotation')) {
+    return (
+      <Block name="annotation-settings">
+        <Elem name="access-denied">
+          <h1>Access Denied</h1>
+          <p>You don't have permission to access Annotation settings.</p>
+          <p>Contact your administrator to request the 'annotation' role.</p>
+        </Elem>
+      </Block>
+    );
+  }
 
   return (
     <Block name="annotation-settings">

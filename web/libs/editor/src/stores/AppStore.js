@@ -772,12 +772,60 @@ export default types
     }
 
     /**
+     * Ensure users are loaded before processing annotations
+     */
+    function ensureUsersLoaded() {
+      // If users array is empty, try to load them from the environment
+      if (self.users.length === 0) {
+        try {
+          // Try to get users from the environment or create placeholder users
+          const env = getEnv(self);
+          if (env?.users && Array.isArray(env.users)) {
+            self.users.push(...env.users);
+          } else {
+            // Create a placeholder user for ID 3 if it doesn't exist
+            const placeholderUser = {
+              id: 3,
+              firstName: "Unknown",
+              lastName: "User",
+              username: "user_3",
+              email: "user3@unknown.com",
+              initials: "U",
+              lastActivity: "",
+              avatar: null,
+              phone: null,
+            };
+            self.users.push(placeholderUser);
+          }
+        } catch (error) {
+          console.warn("Failed to load users:", error.message);
+          // Create a placeholder user for ID 3
+          const placeholderUser = {
+            id: 3,
+            firstName: "Unknown",
+            lastName: "User",
+            username: "user_3",
+            email: "user3@unknown.com",
+            initials: "U",
+            lastActivity: "",
+            avatar: null,
+            phone: null,
+          };
+          self.users.push(placeholderUser);
+        }
+      }
+    }
+
+    /**
      * Function to initialize annotation store
      * Given annotations and predictions
      * `completions` is a fallback for old projects; they'll be saved as `annotations` anyway
      */
     function initializeStore({ annotations = [], completions = [], predictions = [], annotationHistory }) {
       const as = self.annotationStore;
+
+      // Ensure users are loaded before processing annotations
+      ensureUsersLoaded();
 
       // some hacks to properly clear react and mobx structures
       as.afterReset?.();

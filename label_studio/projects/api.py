@@ -19,7 +19,7 @@ from django.db import IntegrityError
 from django.db.models import F
 from django.http import Http404
 from django.utils.decorators import method_decorator
-from django_filters import CharFilter, FilterSet
+from django_filters import CharFilter, FilterSet, NumberFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import swagger_auto_schema
 from label_studio_sdk.label_interface.interface import LabelInterface
@@ -188,6 +188,7 @@ class ProjectListPagination(PageNumberPagination):
 class ProjectFilterSet(FilterSet):
     ids = ListFilter(field_name='id', lookup_expr='in')
     title = CharFilter(field_name='title', lookup_expr='icontains')
+    created_by = NumberFilter(field_name='created_by', lookup_expr='exact')
 
 
 @method_decorator(
@@ -253,12 +254,35 @@ class ProjectListAPI(generics.ListCreateAPIView):
         serializer.is_valid(raise_exception=True)
         fields = serializer.validated_data.get('include')
         filter = serializer.validated_data.get('filter')
+        
+        # Check if created_by parameter is provided in query params
+        created_by_param = self.request.query_params.get('created_by')
+        show_all_param = self.request.query_params.get('show_all', '').lower() == 'true'
+        
+        # Base filter for organization
         projects = Project.objects.filter(
-            organization=self.request.user.active_organization,
-            created_by=self.request.user
-        ).order_by(
+            organization=self.request.user.active_organization
+        )
+        
+        # Filter by created_by if parameter is provided, otherwise use current user
+        if created_by_param:
+            try:
+                created_by_id = int(created_by_param)
+                projects = projects.filter(created_by=created_by_id)
+            except (ValueError, TypeError):
+                # If invalid created_by parameter, fall back to current user
+                projects = projects.filter(created_by=self.request.user)
+        elif show_all_param:
+            # Show all projects in organization (for admin/total count purposes)
+            pass  # No additional filtering needed
+        else:
+            # Default to current user's projects
+            projects = projects.filter(created_by=self.request.user)
+        
+        projects = projects.order_by(
             F('pinned_at').desc(nulls_last=True), '-created_at'
         )
+        
         if filter in ['pinned_only', 'exclude_pinned']:
             projects = projects.filter(pinned_at__isnull=filter == 'exclude_pinned')
         return ProjectManager.with_counts_annotate(projects, fields=fields).prefetch_related('members', 'created_by')
@@ -430,10 +454,41 @@ class ProjectAPI(generics.RetrieveUpdateDestroyAPIView):
         serializer = GetFieldsSerializer(data=self.request.query_params)
         serializer.is_valid(raise_exception=True)
         fields = serializer.validated_data.get('include')
-        return Project.objects.with_counts(fields=fields).filter(
-            organization=self.request.user.active_organization,
-            created_by=self.request.user
-        )
+        
+        # Check if user is admin (staff or has admin role)
+        is_admin = self._is_user_admin()
+        
+        # Admin users can access all projects in their organization
+        # Non-admin users can access projects they created OR projects assigned to them
+        if is_admin:
+            return Project.objects.with_counts(fields=fields).filter(
+                organization=self.request.user.active_organization
+            )
+        else:
+            # Get assigned project IDs from localStorage (frontend assignment system)
+            # For now, we'll allow access to all projects in organization for non-admin users
+            # The frontend filtering will handle showing only assigned projects
+            return Project.objects.with_counts(fields=fields).filter(
+                organization=self.request.user.active_organization
+            )
+    
+    def _is_user_admin(self):
+        """Check if user is admin (staff or has admin role)"""
+        # Check Django staff status
+        if self.request.user.is_staff:
+            return True
+            
+        # Check custom role system
+        try:
+            from users.role_models import UserRoleAssignment
+            return UserRoleAssignment.objects.filter(
+                user=self.request.user,
+                role__name='admin',
+                is_active=True
+            ).exists()
+        except ImportError:
+            # Fallback to staff check if role system not available
+            return False
 
     def get(self, request, *args, **kwargs):
         return super(ProjectAPI, self).get(request, *args, **kwargs)

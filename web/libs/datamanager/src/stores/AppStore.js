@@ -547,14 +547,27 @@ export const AppStore = types
     }),
 
     fetchUsers: flow(function* () {
-      const list = yield self.apiCall("users", {
-        __useQueryCache: {
-          prefixKey: "organizationMembers",
-          staleTime: 60 * 1000,
-        },
-      });
+      try {
+        const list = yield self.apiCall("users", {
+          __useQueryCache: {
+            prefixKey: "organizationMembers",
+            staleTime: 60 * 1000,
+          },
+        });
 
-      self.users.push(...list);
+        // Clear existing users to avoid duplicates
+        self.users.clear();
+        
+        if (list && Array.isArray(list)) {
+          self.users.push(...list);
+        }
+      } catch (error) {
+        console.warn("Failed to fetch users:", error);
+        // Ensure we have at least an empty array
+        if (self.users.length === 0) {
+          self.users.push();
+        }
+      }
     }),
 
     fetchData: flow(function* ({ isLabelStream } = {}) {
@@ -565,6 +578,9 @@ export const AppStore = types
       self.viewsStore.fetchColumns();
 
       const requests = [self.fetchProject(), self.fetchUsers()];
+      
+      // Ensure users are loaded before processing any data
+      yield Promise.all(requests);
 
       if (!isLabelStream || (self.project?.show_annotation_history && task)) {
         if (self.SDK.type === "dm") {

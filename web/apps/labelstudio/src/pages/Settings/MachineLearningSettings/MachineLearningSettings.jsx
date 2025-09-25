@@ -13,15 +13,19 @@ import { CustomBackendForm } from "./Forms";
 import { TestRequest } from "./TestRequest";
 import { StartModelTraining } from "./StartModelTraining";
 import { Block, Elem } from "../../../utils/bem";
+import { useUserRoles } from "../../../hooks/useUserRoles";
 import "./MachineLearningSettings.scss";
+import "../access-denied.scss";
 
 export const MachineLearningSettings = () => {
   const api = useAPI();
   const { project, fetchProject } = useContext(ProjectContext);
   const [backends, setBackends] = useState([]);
+  const { hasRole, loadingRoles } = useUserRoles();
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
+  // All hooks must be called before any conditional returns
   const fetchBackends = useCallback(async () => {
     setLoading(true);
     const models = await api.callApi("mlBackends", {
@@ -94,6 +98,27 @@ export const MachineLearningSettings = () => {
       fetchBackends();
     }
   }, [project.id]);
+
+  // Check if user has model role
+  if (loadingRoles) {
+    return (
+      <Block name="machine-learning-settings">
+        <Elem name="loading">Loading...</Elem>
+      </Block>
+    );
+  }
+
+  if (!hasRole('model')) {
+    return (
+      <Block name="machine-learning-settings">
+        <Elem name="access-denied">
+          <h1>Access Denied</h1>
+          <p>You don't have permission to access Model settings.</p>
+          <p>Contact your administrator to request the 'model' role.</p>
+        </Elem>
+      </Block>
+    );
+  }
 
   return (
     <Block name="ml-settings">

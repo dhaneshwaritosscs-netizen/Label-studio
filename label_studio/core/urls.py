@@ -111,6 +111,8 @@ urlpatterns = [
     path('__lsa/', views.collect_metrics, name='collect_metrics'),
     re_path(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     re_path(r'^', include('jwt_auth.urls')),
+    # Catch-all route for SPA - must be last
+    re_path(r'^(?!api/|admin/|static/|media/|swagger/|docs/|health/|metrics/|version/|feature-flags/|heidi-tips/|__lsa/|api-auth/|sw\.js|sw-fallback\.js|favicon\.ico|label-studio-frontend/|dm/|react-app/|data/local-files/|samples/|trigger500/|django-rq/).*$', views.spa_view, name='spa-fallback'),
 ]
 
 if settings.DEBUG:

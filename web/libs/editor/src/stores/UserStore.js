@@ -14,13 +14,37 @@ export const UserExtended = types
     phone: types.maybeNull(types.string),
   })
   .preProcessSnapshot((sn) => {
-    return camelizeKeys(sn ?? {});
+    const processed = camelizeKeys(sn ?? {});
+    
+    // Ensure we have fallback values for missing user data
+    if (!processed.firstName && !processed.lastName && !processed.username && !processed.email) {
+      processed.firstName = "Unknown";
+      processed.lastName = "User";
+      processed.username = `user_${processed.id}`;
+      processed.email = `user${processed.id}@unknown.com`;
+      processed.initials = "U";
+    }
+    
+    return processed;
   })
   .views((self) => ({
     get displayName() {
       if (self.firstName || self.lastName) return [self.firstName, self.lastName].join(" ").trim();
 
-      return "";
+      return self.username || self.email || `User ${self.id}`;
+    },
+  }))
+  .actions((self) => ({
+    // Action to handle missing user data gracefully
+    ensureUserData() {
+      if (!self.firstName && !self.lastName && !self.username && !self.email) {
+        // Set fallback values if all user data is missing
+        self.firstName = "Unknown";
+        self.lastName = "User";
+        self.username = `user_${self.id}`;
+        self.email = `user${self.id}@unknown.com`;
+        self.initials = "U";
+      }
     },
   }));
 

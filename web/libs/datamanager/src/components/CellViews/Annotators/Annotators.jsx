@@ -23,7 +23,24 @@ export const Annotators = (cell) => {
   return (
     <div className={annotatorsCN.toString()}>
       {renderable.map((item, index) => {
-        const user = item.user ?? item;
+        let user;
+        try {
+          user = item.user ?? item;
+        } catch (error) {
+          // Handle missing user reference gracefully
+          console.warn("Failed to resolve user reference:", error);
+          user = {
+            id: item.id || index,
+            firstName: "Unknown",
+            lastName: "User",
+            email: `user${item.id || index}@unknown.com`,
+            username: `user_${item.id || index}`,
+            fullName: "Unknown User",
+            initials: "U",
+            avatar: null,
+            lastActivity: "",
+          };
+        }
         const { annotated, reviewed, review } = item;
 
         const userpicIsFaded =
@@ -80,28 +97,56 @@ const UsersInjector = inject(({ store }) => {
 
 Annotators.filterItems = (items) => {
   return items.filter((userId) => {
-    const user = DM.usersMap.get(userId);
+    let user;
+    try {
+      user = DM.usersMap.get(userId);
+    } catch (error) {
+      console.warn("Failed to get user for filter items:", error);
+      user = null;
+    }
     return !(user?.firstName === "Deleted" && user?.lastName === "User");
   });
 };
 
 Annotators.FilterItem = UsersInjector(({ item }) => {
-  const user = DM.usersMap.get(item);
+  let user;
+  try {
+    user = DM.usersMap.get(item);
+  } catch (error) {
+    console.warn("Failed to get user from usersMap:", error);
+    user = null;
+  }
 
   return user ? (
     <Space size="small">
       <Userpic user={user} size={16} key={`user-${item}`} />
       {user.displayName}
     </Space>
-  ) : null;
+  ) : (
+    <Space size="small">
+      <Userpic username={`user_${item}`} size={16} key={`user-${item}`} />
+      Unknown User
+    </Space>
+  );
 });
 
 Annotators.searchFilter = (option, queryString) => {
-  const user = DM.usersMap.get(option?.value);
+  let user;
+  try {
+    user = DM.usersMap.get(option?.value);
+  } catch (error) {
+    console.warn("Failed to get user for search filter:", error);
+    user = null;
+  }
+  
+  if (!user) {
+    return `user_${option?.value}`.toLowerCase().includes(queryString.toLowerCase());
+  }
+  
   return (
     user.id?.toString().toLowerCase().includes(queryString.toLowerCase()) ||
-    user.email.toLowerCase().includes(queryString.toLowerCase()) ||
-    user.displayName.toLowerCase().includes(queryString.toLowerCase())
+    user.email?.toLowerCase().includes(queryString.toLowerCase()) ||
+    user.displayName?.toLowerCase().includes(queryString.toLowerCase())
   );
 };
 

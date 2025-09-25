@@ -2,8 +2,11 @@ export const API_CONFIG = {
   gateway: `${window.APP_SETTINGS.hostname}/api`,
   endpoints: {
     // Users
-    users: "/users",
+    listAllUsers: "GET:/users/list_all",
+    listRoleBasedUsers: "GET:/users/list_role_based",
+    createRoleBasedUser: "POST:/users/create_role_based",
     updateUser: "PATCH:/users/:pk",
+    deleteUser: "DELETE:/users/:pk",
     updateUserAvatar: "POST:/users/:pk/avatar",
     deleteUserAvatar: "DELETE:/users/:pk/avatar",
     me: "/current-user/whoami",
@@ -89,6 +92,19 @@ export const API_CONFIG = {
 
     accessTokenSettings: "GET:/jwt/settings",
     accessTokenUpdateSettings: "POST:/jwt/settings",
+
+    // Role Management
+    roleAssignment: "POST:/role-assignment/",
+    roleAssignmentEnhanced: "POST:/role-assignment-enhanced/",
+    availableRoles: "GET:/assignments/available-roles/",
+    assignmentsByEmail: "GET:/assignments/by-email/",
+    revokeAssignment: "POST:/assignments/:pk/revoke/",
+    
+    // Server Response API
+    serverResponse: "POST:/server-response/",
+    serverHealthCheck: "GET:/server-response/",
+    apiStatus: "GET:/status/",
+    userRoles: "GET:/user-roles/",
   },
   alwaysExpectJSON: false,
 };
