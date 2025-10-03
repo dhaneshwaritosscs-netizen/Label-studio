@@ -4,6 +4,8 @@ import { IconExternal, IconFolderAdd, IconHumanSignal, IconUserAdd, IconFolderOp
 
 import { useQuery } from "@tanstack/react-query";
 import { useAPI } from "../../providers/ApiProvider";
+import { useCurrentUser } from "../../providers/CurrentUser";
+import { useUserRoles } from "../../hooks/useUserRoles";
 import { useState } from "react";
 import { CreateProject } from "../CreateProject/CreateProject";
 import { InviteLink } from "../Organization/PeoplePage/InviteLink";
@@ -54,14 +56,52 @@ type Action = (typeof actions)[number]["type"];
 export const HomePage: Page = () => {
   const api = useAPI();
   const history = useHistory();
+  const { user } = useCurrentUser();
+  const { hasRole } = useUserRoles();
   const [creationDialogOpen, setCreationDialogOpen] = useState(false);
   const [invitationOpen, setInvitationOpen] = useState(false);
+  
+  // Determine user role
+  const isAdmin = hasRole('admin');
+  const isClient = hasRole('client') || (!isAdmin && user); // Default to client if not admin
+  
+  // Check if user is the specific admin
+  const isSpecificAdmin = user?.email === 'dhaneshwari.tosscss@gmail.com';
+  
+  // Show create project options only for the specific admin email
+  const showCreateProject = isSpecificAdmin;
   const { data, isFetching, isSuccess, isError } = useQuery({
-    queryKey: ["projects", { page_size: 10 }],
+    queryKey: ["projects", { page_size: 10, user_role: isClient ? 'client' : 'admin' }],
     async queryFn() {
-      return api.callApi<{ results: APIProject[]; count: number }>("projects", {
-        params: { page_size: PROJECTS_TO_SHOW },
-      });
+      if (isClient) {
+        // For client users, fetch assigned projects
+        const allProjectsResponse = await api.callApi<{ results: APIProject[]; count: number }>("projects", {
+          params: { 
+            show_all: true,
+            page_size: 1000,
+            include: "id,title,created_by,created_at,is_published,task_number,total_annotations_number,finished_task_number"
+          },
+        });
+        
+        // Get user's assigned projects from localStorage
+        const userProjectAssignments = JSON.parse(localStorage.getItem('userProjectAssignments') || '{}');
+        const userAssignments = userProjectAssignments[user?.id] || [];
+        
+        // Filter to show only assigned projects
+        const assignedProjects = allProjectsResponse?.results?.filter(project => 
+          userAssignments.includes(project.id)
+        ) || [];
+        
+        return {
+          results: assignedProjects.slice(0, PROJECTS_TO_SHOW),
+          count: assignedProjects.length
+        };
+      } else {
+        // For admin users, fetch all projects
+        return api.callApi<{ results: APIProject[]; count: number }>("projects", {
+          params: { page_size: PROJECTS_TO_SHOW },
+        });
+      }
     },
   });
 
@@ -124,7 +164,7 @@ export const HomePage: Page = () => {
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row justify-center gap-4 w-full max-w-md  ">
-            {actions.map((action) => {
+            {actions.filter(action => showCreateProject || action.title !== "Create Project").map((action) => {
               const isCreateProject = action.title === "Create Project";
               return (
                 <Button
@@ -162,7 +202,7 @@ export const HomePage: Page = () => {
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center gap-3 mb-6">
                   <IconFolderOpen className="w-6 h-6 text-blue-600" />
-                  <h2 className="text-xl font-bold text-gray-800">Your Projects</h2>
+                  <h2 className="text-xl font-bold text-gray-800">{isClient ? "Your Assigned Projects" : "Your Projects"}</h2>
                 </div>
 
                 {isError ? (
@@ -181,24 +221,26 @@ export const HomePage: Page = () => {
                       <IconFolderOpen className="w-10 h-10 text-white" />
                     </div>
                     <Heading size={2} className="text-gray-800 mb-3">
-                      Create your first project in TOAI Studio
+                      {isClient ? "No projects assigned yet" : "Create your first project in TOAI Studio"}
                     </Heading>
                     <Sub className="text-gray-600 mb-6 max-w-md">
-                      Import your data and set up the labeling interface to start annotating
+                      {isClient ? "Contact your administrator to get projects assigned to you" : "Import your data and set up the labeling interface to start annotating"}
                     </Sub>
-                    <Button
-                      variant="primary"
-                      size="medium"
-                      className="px-8 py-3 text-lg font-medium border-0 shadow-sm hover:shadow-md transition-all duration-200 rounded-lg"
-                      style={{
-                        background: "rgb(25 44 89)",
-                        width: "200px",
-                        minWidth: "200px"
-                      }}
-                      onClick={() => setCreationDialogOpen(true)}
-                    >
-                      Create Project
-                    </Button>
+                    {showCreateProject && (
+                      <Button
+                        variant="primary"
+                        size="medium"
+                        className="px-8 py-3 text-lg font-medium border-0 shadow-sm hover:shadow-md transition-all duration-200 rounded-lg"
+                        style={{
+                          background: "rgb(25 44 89)",
+                          width: "200px",
+                          minWidth: "200px"
+                        }}
+                        onClick={() => setCreationDialogOpen(true)}
+                      >
+                        Create Project
+                      </Button>
+                    )}
                   </div>
                 ) : isSuccess && data && data.results.length > 0 ? (
                   <div className="flex flex-col gap-3">

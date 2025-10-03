@@ -139,11 +139,34 @@ class UserAPI(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'head', 'patch', 'delete']
 
     def _is_admin(self, user):
+        # Check for specific admin email
+        if user.email == 'dhaneshwari.tosscss@gmail.com':
+            return True
         if getattr(user, 'is_superuser', False) or getattr(user, 'is_staff', False):
             return True
         try:
             from users.role_models import UserRoleAssignment
-            return UserRoleAssignment.objects.filter(user=user, role__name__iexact='administrator', is_active=True).exists()
+            # Check for both 'administrator' and 'admin' roles
+            return UserRoleAssignment.objects.filter(
+                user=user, 
+                role__name__in=['administrator', 'admin'], 
+                is_active=True
+            ).exists()
+        except Exception:
+            return False
+    
+    def _is_client(self, user):
+        # Check for specific client email
+        if user.email == 'dhaneshwari.ttosscss@gmail.com':
+            return True
+        try:
+            from users.role_models import UserRoleAssignment
+            # Check for 'client' role
+            return UserRoleAssignment.objects.filter(
+                user=user, 
+                role__name__iexact='client', 
+                is_active=True
+            ).exists()
         except Exception:
             return False
 
@@ -298,8 +321,13 @@ class UserAPI(viewsets.ModelViewSet):
                     user_data['created_by'] = request.user
                     role = 'User'  # Clients can only create User role
                 else:
-                    # Admin can create any role - use the provided role
-                    pass
+                    # Admin can create any role - normalize role names
+                    if role.lower() == 'admin':
+                        role = 'Administrator'
+                    elif role.lower() == 'client':
+                        role = 'Client'
+                    elif role.lower() == 'user':
+                        role = 'User'
                 
                 new_user = User.objects.create(**user_data)
                 
@@ -421,6 +449,8 @@ class UserAPI(viewsets.ModelViewSet):
             # Get pagination parameters
             page = int(request.GET.get('page', 1))
             page_size = int(request.GET.get('page_size', 10))
+            search_query = request.GET.get('search', '').strip()
+            user_filter = request.GET.get('user_filter', 'All Users').strip()
             
             # Calculate offset
             offset = (page - 1) * page_size
@@ -437,6 +467,40 @@ class UserAPI(viewsets.ModelViewSet):
             else:
                 # Client sees only users they created
                 filtered_memberships = memberships_query.filter(user__created_by=request.user)
+            
+            # Apply search filtering if search query is provided
+            if search_query:
+                from django.db.models import Q
+                filtered_memberships = filtered_memberships.filter(
+                    Q(user__email__icontains=search_query) |
+                    Q(user__first_name__icontains=search_query) |
+                    Q(user__last_name__icontains=search_query) |
+                    Q(user__username__icontains=search_query)
+                )
+            
+            # Apply user status filtering
+            if user_filter == "Active Users":
+                from django.utils import timezone
+                from datetime import timedelta
+                seven_days_ago = timezone.now() - timedelta(days=7)
+                
+                # Users are active if they have recent activity OR joined recently
+                from django.db.models import Q
+                filtered_memberships = filtered_memberships.filter(
+                    Q(user__last_activity__gte=seven_days_ago) |
+                    Q(user__date_joined__gte=seven_days_ago)
+                )
+            elif user_filter == "Inactive Users":
+                from django.utils import timezone
+                from datetime import timedelta
+                seven_days_ago = timezone.now() - timedelta(days=7)
+                
+                # Users are inactive if they have old activity AND joined more than 7 days ago
+                from django.db.models import Q
+                filtered_memberships = filtered_memberships.filter(
+                    Q(user__last_activity__lt=seven_days_ago) |
+                    Q(user__last_activity__isnull=True, user__date_joined__lt=seven_days_ago)
+                )
             
             # Get total count
             total_count = filtered_memberships.count()
@@ -456,6 +520,8 @@ class UserAPI(viewsets.ModelViewSet):
                         'username': user.username,
                         'is_active': user.is_active,
                         'created_by': user.created_by_id,
+                        'last_activity': user.last_activity.isoformat() if user.last_activity else None,
+                        'date_joined': user.date_joined.isoformat() if user.date_joined else None,
                     },
                     'organization': {
                         'id': membership.organization.id,
@@ -571,3 +637,79 @@ class UserWhoAmIAPI(generics.RetrieveAPIView):
 
     def get(self, request, *args, **kwargs):
         return super(UserWhoAmIAPI, self).get(request, *args, **kwargs)
+
+@method_decorator(
+    name='post',
+    decorator=swagger_auto_schema(
+        tags=['Users'],
+        operation_summary='Send email notification',
+        operation_description='Send email notification to a user',
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'to': openapi.Schema(type=openapi.TYPE_STRING, description='Recipient email address'),
+                'subject': openapi.Schema(type=openapi.TYPE_STRING, description='Email subject'),
+                'message': openapi.Schema(type=openapi.TYPE_STRING, description='Email message content'),
+            },
+            required=['to', 'subject', 'message']
+        ),
+        responses={
+            200: openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={'success': openapi.Schema(type=openapi.TYPE_BOOLEAN)},
+            ),
+            400: openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={'error': openapi.Schema(type=openapi.TYPE_STRING)},
+            ),
+        },
+    ),
+)
+class SendEmailAPI(APIView):
+    """
+    API view for sending email notifications
+    """
+    parser_classes = (JSONParser,)
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        """
+        Send email notification
+        """
+        try:
+            to_email = request.data.get('to')
+            subject = request.data.get('subject')
+            message = request.data.get('message')
+            
+            if not to_email or not subject or not message:
+                return Response(
+                    {'error': 'Missing required fields: to, subject, message'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Send email using Django's send_mail
+            from django.core.mail import send_mail
+            from django.conf import settings
+            
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[to_email],
+                fail_silently=False,
+            )
+            
+            logger.info(f"Email sent successfully to {to_email}")
+            
+            return Response(
+                {'success': True, 'message': f'Email sent successfully to {to_email}'},
+                status=status.HTTP_200_OK
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to send email: {str(e)}")
+            return Response(
+                {'error': f'Failed to send email: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+

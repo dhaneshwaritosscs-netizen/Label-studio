@@ -40,7 +40,27 @@ export const useUserRoles = () => {
   }, [user?.email]);
 
   const hasRole = (roleName) => {
-    return userRoles.some(role => role.name === roleName);
+    return userRoles.some(role => {
+      const roleNameLower = role.name.toLowerCase();
+      const checkNameLower = roleName.toLowerCase();
+      
+      // Handle different role name formats
+      if (checkNameLower === 'admin') {
+        return roleNameLower === 'admin' || roleNameLower === 'administrator';
+      }
+      if (checkNameLower === 'client') {
+        return roleNameLower === 'client';
+      }
+      if (checkNameLower === 'user') {
+        return roleNameLower === 'user';
+      }
+      if (checkNameLower === 'qcr') {
+        return roleNameLower === 'qcr';
+      }
+      
+      // Default exact match
+      return role.name === roleName;
+    });
   };
 
   const hasAnyRole = (roleNames) => {

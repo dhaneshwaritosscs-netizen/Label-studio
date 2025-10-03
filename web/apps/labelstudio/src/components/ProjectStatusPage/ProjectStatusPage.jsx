@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { IconSearch, IconRefresh, IconFileDownload, IconClose, IconChevronLeft } from "@humansignal/icons";
 import { useAPI } from "../../providers/ApiProvider";
+import { useCurrentUser } from "../../providers/CurrentUser";
+import { useUserRoles } from "../../hooks/useUserRoles";
+import { TopNavigationBar } from "../TopNavigationBar";
 
 export const ProjectStatusPage = ({ onClose }) => {
   const api = useAPI();
+  const { user } = useCurrentUser();
+  const { hasRole } = useUserRoles();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("Active");
   const [showInfoBanner, setShowInfoBanner] = useState(true);
   const [selectedMainTab, setSelectedMainTab] = useState("Project Status");
-  const [selectedSubTab, setSelectedSubTab] = useState("Submitted Tasks");
+  const [selectedSubTab, setSelectedSubTab] = useState("Task");
   const [startDate, setStartDate] = useState("12/09/2025");
   const [endDate, setEndDate] = useState("12/09/2025");
   const [selectedProject, setSelectedProject] = useState("");
@@ -23,18 +28,229 @@ export const ProjectStatusPage = ({ onClose }) => {
   const [selectedMonthYear, setSelectedMonthYear] = useState("September 2025");
   const [cumulativeProductivityData, setCumulativeProductivityData] = useState([]);
   const [isDaywiseReport, setIsDaywiseReport] = useState(false);
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [selectedProjectUsers, setSelectedProjectUsers] = useState([]);
+  const [selectedProjectTitle, setSelectedProjectTitle] = useState("");
+  const [userProjectAssignments, setUserProjectAssignments] = useState({});
+  const [clientUserAssignments, setClientUserAssignments] = useState({});
+  const [usersData, setUsersData] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({});
+  const [userTargetsWithProjects, setUserTargetsWithProjects] = useState([]);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [selectedTaskType, setSelectedTaskType] = useState(""); // "completed" or "pending"
+  const [selectedProjectForTasks, setSelectedProjectForTasks] = useState(null);
+  const [tasksData, setTasksData] = useState([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
+
+  // Fetch tasks for a specific project
+  const fetchProjectTasks = async (projectId, taskType) => {
+    try {
+      setTasksLoading(true);
+      
+      // Try different API endpoints for tasks
+      let tasksResponse = null;
+      
+      try {
+        // First try the tasks endpoint
+        tasksResponse = await api.callApi("tasks", {
+          params: {
+            project: projectId,
+            page_size: 1000,
+            include: "id,data,annotations,created_at,updated_at,annotations_count,annotations_results"
+          }
+        });
+        console.log('DEBUG: Tasks API response:', tasksResponse);
+      } catch (error) {
+        console.log('DEBUG: Tasks API failed, trying alternative:', error);
+        
+        // Try alternative endpoint
+        try {
+          tasksResponse = await api.callApi(`projects/${projectId}/tasks`, {
+            params: {
+              page_size: 1000,
+              include: "id,data,annotations,created_at,updated_at,annotations_count,annotations_results"
+            }
+          });
+          console.log('DEBUG: Alternative tasks API response:', tasksResponse);
+        } catch (altError) {
+          console.log('DEBUG: Alternative API also failed:', altError);
+          throw altError;
+        }
+      }
+      
+      if (tasksResponse && tasksResponse.results) {
+        console.log(`DEBUG: Fetched ${tasksResponse.results.length} tasks for project ${projectId}`);
+        console.log('DEBUG: All tasks data:', tasksResponse.results);
+        
+        let filteredTasks = [];
+        
+        if (taskType === "completed") {
+          // Filter completed tasks (tasks with annotations or annotations_count > 0)
+          filteredTasks = tasksResponse.results.filter(task => {
+            const hasAnnotations = (task.annotations && task.annotations.length > 0) || 
+                                 (task.annotations_count && task.annotations_count > 0) ||
+                                 (task.annotations_results && task.annotations_results.length > 0);
+            console.log(`DEBUG: Task ${task.id} - annotations: ${task.annotations?.length || 0}, annotations_count: ${task.annotations_count || 0}, annotations_results: ${task.annotations_results?.length || 0}, isCompleted: ${hasAnnotations}`);
+            return hasAnnotations;
+          });
+          console.log(`DEBUG: Found ${filteredTasks.length} completed tasks`);
+        } else if (taskType === "pending") {
+          // Filter pending tasks (tasks without annotations)
+          filteredTasks = tasksResponse.results.filter(task => {
+            const hasAnnotations = (task.annotations && task.annotations.length > 0) || 
+                                 (task.annotations_count && task.annotations_count > 0) ||
+                                 (task.annotations_results && task.annotations_results.length > 0);
+            const isPending = !hasAnnotations;
+            console.log(`DEBUG: Task ${task.id} - annotations: ${task.annotations?.length || 0}, annotations_count: ${task.annotations_count || 0}, annotations_results: ${task.annotations_results?.length || 0}, isPending: ${isPending}`);
+            return isPending;
+          });
+          console.log(`DEBUG: Found ${filteredTasks.length} pending tasks`);
+        }
+        
+        setTasksData(filteredTasks);
+      } else {
+        setTasksData([]);
+      }
+    } catch (error) {
+      console.error("Error fetching project tasks:", error);
+      setTasksData([]);
+    } finally {
+      setTasksLoading(false);
+    }
+  };
+
+  // Handle click on Complete or Pending column
+  const handleTaskColumnClick = (project, taskType) => {
+    console.log(`DEBUG: Clicked on ${taskType} for project ${project.title} (ID: ${project.id})`);
+    setSelectedProjectForTasks(project);
+    setSelectedTaskType(taskType);
+    setShowTaskModal(true);
+    fetchProjectTasks(project.id, taskType);
+  };
 
   // Fetch project status data from backend
   const fetchProjectStatus = async () => {
     try {
       setLoading(true);
+      
+      // Determine user role
+      const isAdmin = hasRole('admin') || user?.email === 'dhaneshwari.tosscss@gmail.com';
+      
+      const requestParams = {
+        page_size: 1000, // Large page size to get all projects
+        include: [
+          "id",
+          "title",
+          "created_by",
+          "created_at",
+          "color",
+          "is_published",
+          "assignment_settings",
+          "task_number",
+          "total_annotations_number",
+          "finished_task_number",
+          "batches"
+        ].join(",")
+      };
+      
+      // For admin users, fetch only projects created by them
+      if (isAdmin && user) {
+        requestParams.created_by = user.id;
+        requestParams.show_all = true;
+        console.log("Fetching projects for admin user ID:", user.id);
+      } else {
+        // For client users, fetch all projects (will be filtered by assignments)
+        console.log("Fetching all projects for client user");
+        requestParams.show_all = true;
+      }
+      
       // Fetch projects data
-      const projectsResponse = await api.callApi("projects");
+      const projectsResponse = await api.callApi("projects", {
+        params: requestParams
+      });
+      
       if (projectsResponse && projectsResponse.results) {
+        console.log("Fetched projects:", projectsResponse.results.length);
         setProjects(projectsResponse.results);
       }
     } catch (error) {
       console.error("Error fetching project status:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch users assigned to a specific project
+  const fetchProjectUsers = async (projectId, projectTitle) => {
+    try {
+      setLoading(true);
+      
+      // Get user project assignments from state
+      const userInfoCache = JSON.parse(localStorage.getItem('userInfoCache') || '{}');
+      
+      // Find users assigned to this project
+      const assignedUserIds = [];
+      const isAdmin = hasRole('admin') || user?.email === 'dhaneshwari.tosscss@gmail.com';
+      
+      if (isAdmin) {
+        // For admin: show all users assigned to this project
+        Object.keys(userProjectAssignments).forEach(userId => {
+          const userAssignments = userProjectAssignments[userId] || [];
+          if (userAssignments.includes(projectId)) {
+            assignedUserIds.push(userId);
+          }
+        });
+      } else {
+        // For client: show only users assigned by this client to this project
+        if (user && clientUserAssignments[user.id]) {
+          const clientProjectAssignments = clientUserAssignments[user.id] || {};
+          const usersAssignedByThisClient = clientProjectAssignments[projectId] || [];
+          assignedUserIds.push(...usersAssignedByThisClient);
+        }
+      }
+      
+      // Get user details from cache or fetch from API
+      const users = [];
+      for (const userId of assignedUserIds) {
+        if (userInfoCache[userId]) {
+          users.push(userInfoCache[userId]);
+        } else {
+          try {
+            // Fetch user details from API
+            const userResponse = await api.callApi("users", {
+              params: { id: userId }
+            });
+            if (userResponse && userResponse.results && userResponse.results.length > 0) {
+              const userData = userResponse.results[0];
+              users.push(userData);
+              // Cache the user data
+              userInfoCache[userId] = userData;
+            }
+          } catch (error) {
+            console.error(`Error fetching user ${userId}:`, error);
+          }
+        }
+      }
+      
+      // Add project creator if not already in the list
+      const project = projects.find(p => p.id === projectId);
+      if (project && project.created_by) {
+        const creatorAlreadyInList = users.some(user => user.id === project.created_by.id);
+        if (!creatorAlreadyInList) {
+          users.push(project.created_by);
+        }
+      }
+      
+      setSelectedProjectUsers(users);
+      setSelectedProjectTitle(projectTitle);
+      setShowUserModal(true);
+      
+      // Update cache
+      localStorage.setItem('userInfoCache', JSON.stringify(userInfoCache));
+      
+    } catch (error) {
+      console.error("Error fetching project users:", error);
     } finally {
       setLoading(false);
     }
@@ -203,28 +419,308 @@ export const ProjectStatusPage = ({ onClose }) => {
     }
   };
 
+  // Fetch users data for Users Status tab (same as AssignRole page)
+  const fetchUsersData = async () => {
+    try {
+      setUsersLoading(true);
+      console.log("Fetching users...");
+      
+      // Use same API call as AssignRole page
+      const response = await api.callApi("memberships", {
+        params: {
+          pk: 1,
+          contributed_to_projects: 1,
+          page: 1,
+          page_size: 100,
+        },
+        include: [
+          "id",
+          "email", 
+          "first_name",
+          "last_name",
+          "username",
+          "created_by",
+          "is_active"
+        ],
+      });
+
+      console.log("Users response:", response);
+      if (response && response.results) {
+        setUsersData(response.results);
+        console.log("Users loaded:", response.results.length);
+      } else {
+        console.warn("No users found in response");
+        setUsersData([]);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      setUsersData([]);
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  // Fetch user targets with their assigned projects
+  const fetchUserTargetsWithProjects = async () => {
+    try {
+      setUsersLoading(true);
+      
+      // Fetch users data - use same API call as Users Status
+      const usersResponse = await api.callApi("memberships", {
+        params: {
+          pk: 1,
+          contributed_to_projects: 1,
+          page: 1,
+          page_size: 100,
+        },
+        include: [
+          "id",
+          "email", 
+          "first_name",
+          "last_name",
+          "username",
+          "created_by",
+          "is_active"
+        ],
+      });
+      
+      console.log("Users Target response:", usersResponse);
+      if (usersResponse && usersResponse.results) {
+        console.log("Users Target results:", usersResponse.results);
+        // Load user project assignments from localStorage
+        const assignments = JSON.parse(localStorage.getItem('userProjectAssignments') || '{}');
+        const clientAssignments = JSON.parse(localStorage.getItem('clientUserAssignments') || '{}');
+        
+        // Determine current user role
+        const isAdmin = hasRole('admin') || user?.email === 'dhaneshwari.tosscss@gmail.com';
+        
+        // Process users with their projects and targets
+        const processedUsers = usersResponse.results.map((userData) => {
+          const displayedUser = userData.user || userData; // Handle both data structures like Users Status
+          
+          console.log('DEBUG: userData:', userData);
+          console.log('DEBUG: displayedUser:', displayedUser);
+          
+          // Apply role-based filtering
+          let shouldShow = false;
+          if (!isAdmin && user) {
+            const isCreatedByClient = displayedUser.created_by === user.id;
+            const isClientSelf = displayedUser.id === user.id;
+            shouldShow = isCreatedByClient || isClientSelf;
+          } else {
+            shouldShow = true;
+          }
+          
+          if (!shouldShow) return null;
+          
+          // Get user's assigned projects
+          const userAssignments = assignments[displayedUser.id] || [];
+          const userProjects = projects.filter(project => userAssignments.includes(project.id));
+          
+          // Get user target from localStorage (set from User Role Assignment page)
+          const userTargets = JSON.parse(localStorage.getItem('userTargets') || '{}');
+          const userTarget = userTargets[displayedUser.id] || null;
+          
+          return {
+            user: displayedUser,
+            projects: userProjects,
+            target: userTarget,
+            assignments: userAssignments
+          };
+        }).filter(Boolean);
+        
+        setUserTargetsWithProjects(processedUsers);
+      }
+    } catch (error) {
+      console.error("Error fetching user targets with projects:", error);
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  // Function to refresh user project assignments
+  const refreshUserProjectAssignments = () => {
+    try {
+      const saved = localStorage.getItem('userProjectAssignments');
+      console.log('Refreshing userProjectAssignments from localStorage:', saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        console.log('Parsed userProjectAssignments:', parsed);
+        setUserProjectAssignments(parsed);
+      } else {
+        console.log('No userProjectAssignments found in localStorage');
+        setUserProjectAssignments({});
+      }
+      
+      // Also load client assignment tracking
+      const clientSaved = localStorage.getItem('clientUserAssignments');
+      console.log('Refreshing clientUserAssignments from localStorage:', clientSaved);
+      if (clientSaved) {
+        const clientParsed = JSON.parse(clientSaved);
+        console.log('Parsed clientUserAssignments:', clientParsed);
+        setClientUserAssignments(clientParsed);
+      } else {
+        console.log('No clientUserAssignments found in localStorage');
+        setClientUserAssignments({});
+      }
+    } catch (error) {
+      console.error('Error loading user project assignments:', error);
+      setUserProjectAssignments({});
+      setClientUserAssignments({});
+    }
+  };
+
+  // Load user project assignments from localStorage
   useEffect(() => {
-    fetchProjectStatus();
+    refreshUserProjectAssignments();
   }, []);
 
-  // Filter projects based on search term and active/archived status
+  // Refresh assignments when user changes
+  useEffect(() => {
+    if (user?.id) {
+      refreshUserProjectAssignments();
+    }
+  }, [user?.id]);
+
+  // Fetch users data when Users Status tab is selected
+  useEffect(() => {
+    if (selectedMainTab === "Users Status") {
+      fetchUsersData();
+    }
+  }, [selectedMainTab]);
+
+  // Fetch user targets when Users Target tab is selected
+  useEffect(() => {
+    if (selectedMainTab === "Users Target") {
+      fetchUserTargetsWithProjects();
+    }
+  }, [selectedMainTab, projects, userProjectAssignments]);
+
+  // Toggle section expansion
+  const toggleSection = (userId, sectionType) => {
+    const key = `${userId}-${sectionType}`;
+    setExpandedSections(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  useEffect(() => {
+    fetchProjectStatus();
+  }, [userProjectAssignments]); // Re-fetch when assignments change
+
+  // Filter projects based on search term, active/archived status, and user role
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          project.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = activeTab === "Active" ? !project.is_archived : project.is_archived;
+    
+    // Role-based filtering
+    const isAdmin = hasRole('admin') || user?.email === 'dhaneshwari.tosscss@gmail.com';
+    const isClient = !isAdmin;
+    
+    console.log('Project filtering debug:', {
+      projectId: project.id,
+      projectTitle: project.title,
+      isAdmin: isAdmin,
+      isClient: isClient,
+      userId: user?.id,
+      userEmail: user?.email,
+      userProjectAssignments: userProjectAssignments
+    });
+    
+    if (isClient && user) {
+      // For client users, only show projects assigned to them
+      const currentUserAssignments = userProjectAssignments[user.id] || [];
+      const isProjectAssignedToUser = currentUserAssignments.includes(project.id);
+      
+      // Debug logging
+      console.log('Client filtering debug:', {
+        userId: user.id,
+        userEmail: user.email,
+        projectId: project.id,
+        projectTitle: project.title,
+        userAssignments: currentUserAssignments,
+        isProjectAssignedToUser: isProjectAssignedToUser,
+        allAssignments: userProjectAssignments
+      });
+      
+      return matchesSearch && matchesStatus && isProjectAssignedToUser;
+    }
+    
+    // For admin users, show all projects
     return matchesSearch && matchesStatus;
   });
 
   // Calculate project statistics
   const calculateProjectStats = (project) => {
-    // These would typically come from the backend API
-    // For now, we'll use placeholder calculations
-    const total = project.task_count || 0;
-    const complete = Math.floor(total * 0.7); // 70% complete as example
-    const pending = total - complete;
-    const active = 0; // No active tasks in the example
-    const completePercentage = total > 0 ? Math.round((complete / total) * 100) : 0;
-    const users = project.members?.length || 0;
+    const total = project.task_number || 0;
+    const annotations = project.total_annotations_number || 0;
+    const finishedTasks = project.finished_task_number || 0;
+    
+    // Count users assigned to this project by the current client only
+    let assignedUsersCount = 0;
+    
+    // Determine if current user is admin or client
+    const isAdmin = hasRole('admin') || user?.email === 'dhaneshwari.tosscss@gmail.com';
+    
+    if (isAdmin) {
+      // For admin: count all users assigned to this project
+      Object.keys(userProjectAssignments).forEach(userId => {
+        const userAssignments = userProjectAssignments[userId] || [];
+        if (userAssignments.includes(project.id)) {
+          assignedUsersCount++;
+        }
+      });
+      
+      // Add project creator to user count if not already counted
+      if (project.created_by && !Object.keys(userProjectAssignments).some(userId => {
+        const userAssignments = userProjectAssignments[userId] || [];
+        return userAssignments.includes(project.id) && userId === project.created_by.id.toString();
+      })) {
+        assignedUsersCount++;
+      }
+    } else {
+      // For client: count only users assigned by this client to this project
+      if (user && clientUserAssignments[user.id]) {
+        const clientProjectAssignments = clientUserAssignments[user.id] || {};
+        const usersAssignedByThisClient = clientProjectAssignments[project.id] || [];
+        assignedUsersCount = usersAssignedByThisClient.length;
+      }
+    }
+    
+    // Determine project status based on annotations and completion
+    let active = 0;
+    let pending = 0;
+    let complete = 0;
+    let completePercentage = 0;
+    
+    if (total === 0) {
+      // New project with no tasks
+      active = 1;
+      pending = 0;
+      complete = 0;
+      completePercentage = 0;
+    } else {
+      // Calculate actual completed and pending tasks
+      complete = finishedTasks || 0; // Tasks with annotations
+      pending = Math.max(0, total - complete); // Remaining tasks
+      
+      if (complete === 0) {
+        // No tasks completed yet
+        active = 1;
+        completePercentage = 0;
+      } else if (complete === total) {
+        // All tasks completed
+        active = 0;
+        completePercentage = 100;
+      } else {
+        // Some tasks completed, some pending
+        active = 0;
+        completePercentage = Math.round((complete / total) * 100);
+      }
+    }
+
     const batches = project.batches?.length || 1;
 
     return {
@@ -233,7 +729,7 @@ export const ProjectStatusPage = ({ onClose }) => {
       complete,
       active,
       completePercentage,
-      users,
+      users: assignedUsersCount,
       batches
     };
   };
@@ -244,6 +740,9 @@ export const ProjectStatusPage = ({ onClose }) => {
       minHeight: "100vh",
       padding: "24px",
     }}>
+      {/* Top Navigation Bar */}
+      <TopNavigationBar />
+      
       {/* Header */}
       <div style={{
         display: "flex",
@@ -330,81 +829,6 @@ export const ProjectStatusPage = ({ onClose }) => {
         ))}
       </div>
 
-      {/* Info Banner */}
-      {showInfoBanner && (
-        <div style={{
-          backgroundColor: "#dbeafe",
-          border: "1px solid #93c5fd",
-          borderRadius: "8px",
-          padding: "12px 16px",
-          marginBottom: "24px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}>
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}>
-            <div style={{
-              width: "16px",
-              height: "16px",
-              backgroundColor: "#3b82f6",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "white",
-              fontSize: "12px",
-              fontWeight: "600",
-            }}>
-              i
-            </div>
-            <span style={{
-              fontSize: "14px",
-              color: "#1e40af",
-            }}>
-              {selectedMainTab === "Users Status" 
-                ? "View the consolidated task summary for each user for a selected period. Filter the report by execution level, if required. Use the controls at the top-right corner to toggle report format, download the report."
-                : selectedMainTab === "Users Target"
-                ? "View the performance of each user against the targets set for them. Filter the report by execution level, if required. Use the controls at the top-right corner to toggle report format, download the report."
-                : selectedMainTab === "Billing Report"
-                ? "View the billing report grouped at various levels, such as organization, project, batch, execution level, and user."
-                : selectedMainTab === "Tenant Report"
-                ? "View the tenant report grouped at various levels, such as execution level, and number of user."
-                : selectedMainTab === "Monthly Productivity"
-                ? "View the performance and utilization for all your users grouped by the assigned projects."
-                : selectedMainTab === "Cumulative Productivity"
-                ? "View the cumulative performance and utilization for all your users across all projects and execution levels."
-                : "View consolidated task status for all projects. View the User Status Report and the Batch Status Report for a given project. Use the controls at the top-right corner to toggle report format, download the report."
-              }
-            </span>
-          </div>
-          <button
-            onClick={() => setShowInfoBanner(false)}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: "4px",
-              borderRadius: "4px",
-              color: "#6b7280",
-              transition: "all 0.2s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#f3f4f6";
-              e.currentTarget.style.color = "#374151";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "transparent";
-              e.currentTarget.style.color = "#6b7280";
-            }}
-          >
-            <IconClose style={{ width: "16px", height: "16px" }} />
-          </button>
-        </div>
-      )}
 
       {/* Search and Actions Bar */}
       <div style={{
@@ -413,89 +837,8 @@ export const ProjectStatusPage = ({ onClose }) => {
         justifyContent: "space-between",
         marginBottom: "24px",
       }}>
-        {/* Left side - Date pickers for Users Status/Users Target/Billing Report/Tenant Report, Checkbox+Date for Cumulative Productivity, Search for Monthly Productivity and others */}
-        {(selectedMainTab === "Users Status" || selectedMainTab === "Users Target" || selectedMainTab === "Billing Report" || selectedMainTab === "Tenant Report") ? (
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-          }}>
-            <input
-              type="text"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              style={{
-                padding: "10px 12px",
-                border: "1px solid #d1d5db",
-                borderRadius: "8px",
-                fontSize: "14px",
-                outline: "none",
-                backgroundColor: "#ffffff",
-                width: "120px",
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = "#3b82f6";
-                e.currentTarget.style.boxShadow = "0 0 0 3px rgba(59, 130, 246, 0.1)";
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = "#d1d5db";
-                e.currentTarget.style.boxShadow = "none";
-              }}
-            />
-            <input
-              type="text"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              style={{
-                padding: "10px 12px",
-                border: "1px solid #d1d5db",
-                borderRadius: "8px",
-                fontSize: "14px",
-                outline: "none",
-                backgroundColor: "#ffffff",
-                width: "120px",
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = "#3b82f6";
-                e.currentTarget.style.boxShadow = "0 0 0 3px rgba(59, 130, 246, 0.1)";
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = "#d1d5db";
-                e.currentTarget.style.boxShadow = "none";
-              }}
-            />
-            <button
-              onClick={() => {
-                if (selectedMainTab === "Users Target") {
-                  fetchUserTargets();
-                } else if (selectedMainTab === "Billing Report") {
-                  fetchBillingData();
-                } else if (selectedMainTab === "Tenant Report") {
-                  fetchTenantReport();
-                }
-              }}
-              style={{
-                padding: "10px 20px",
-                backgroundColor: "#7c3aed",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontWeight: "600",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#6d28d9";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "#7c3aed";
-              }}
-            >
-              SUBMIT
-            </button>
-          </div>
-        ) : selectedMainTab === "Cumulative Productivity" ? (
+        {/* Left side - Checkbox+Date for Cumulative Productivity, Search for Monthly Productivity and others */}
+        {selectedMainTab === "Cumulative Productivity" ? (
           <div style={{
             display: "flex",
             alignItems: "center",
@@ -632,92 +975,6 @@ export const ProjectStatusPage = ({ onClose }) => {
         )}
 
         {/* Action Buttons */}
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-        }}>
-          <button
-            onClick={fetchProjectStatus}
-            style={{
-              width: "40px",
-              height: "40px",
-              borderRadius: "50%",
-              border: "1px solid #d1d5db",
-              backgroundColor: "#ffffff",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "all 0.2s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#f9fafb";
-              e.currentTarget.style.borderColor = "#9ca3af";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "#ffffff";
-              e.currentTarget.style.borderColor = "#d1d5db";
-            }}
-          >
-            <IconRefresh style={{ width: "18px", height: "18px", color: "#6b7280" }} />
-          </button>
-          
-          <button
-            style={{
-              width: "40px",
-              height: "40px",
-              borderRadius: "50%",
-              border: "1px solid #d1d5db",
-              backgroundColor: "#ffffff",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "all 0.2s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#f9fafb";
-              e.currentTarget.style.borderColor = "#9ca3af";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "#ffffff";
-              e.currentTarget.style.borderColor = "#d1d5db";
-            }}
-          >
-            <div style={{
-              width: "18px",
-              height: "18px",
-              background: "linear-gradient(45deg, #3b82f6, #1d4ed8)",
-              borderRadius: "2px",
-            }} />
-          </button>
-          
-          <button
-            style={{
-              width: "40px",
-              height: "40px",
-              borderRadius: "50%",
-              border: "1px solid #d1d5db",
-              backgroundColor: "#ffffff",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "all 0.2s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#f9fafb";
-              e.currentTarget.style.borderColor = "#9ca3af";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "#ffffff";
-              e.currentTarget.style.borderColor = "#d1d5db";
-            }}
-          >
-            <IconFileDownload style={{ width: "18px", height: "18px", color: "#6b7280" }} />
-          </button>
-        </div>
       </div>
 
       {/* Content Tabs */}
@@ -728,7 +985,7 @@ export const ProjectStatusPage = ({ onClose }) => {
         borderBottom: "1px solid #e5e7eb",
       }}>
         {selectedMainTab === "Users Status" ? (
-          ["Submitted Tasks", "Daywise Report", "Other Tasks"].map((tab) => (
+          ["Task"].map((tab) => (
             <button
               key={tab}
               onClick={() => setSelectedSubTab(tab)}
@@ -818,7 +1075,7 @@ export const ProjectStatusPage = ({ onClose }) => {
             </button>
           ))
         ) : (
-          ["Active", "Archived"].map((tab) => (
+          ["Active"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -850,47 +1107,6 @@ export const ProjectStatusPage = ({ onClose }) => {
         )}
       </div>
 
-      {/* Project Dropdown for Users Status/Users Target */}
-      {(selectedMainTab === "Users Status" || selectedMainTab === "Users Target") && (
-        <div style={{
-          marginBottom: "24px",
-        }}>
-          <div style={{
-            position: "relative",
-            width: "200px",
-          }}>
-            <select
-              value={selectedProject}
-              onChange={(e) => setSelectedProject(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                border: "1px solid #d1d5db",
-                borderRadius: "8px",
-                fontSize: "14px",
-                outline: "none",
-                backgroundColor: "#ffffff",
-                cursor: "pointer",
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = "#3b82f6";
-                e.currentTarget.style.boxShadow = "0 0 0 3px rgba(59, 130, 246, 0.1)";
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = "#d1d5db";
-                e.currentTarget.style.boxShadow = "none";
-              }}
-            >
-              <option value="">Project Name</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.title}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      )}
 
       {/* Projects Table */}
       <div style={{
@@ -903,7 +1119,7 @@ export const ProjectStatusPage = ({ onClose }) => {
         {selectedMainTab === "Project Status" && (
           <div style={{
             display: "grid",
-            gridTemplateColumns: "2fr 1.5fr 80px 80px 80px 80px 120px 80px 80px",
+            gridTemplateColumns: "2fr 1.5fr 80px 80px 80px 80px 120px 80px",
             gap: "16px",
             padding: "16px 20px",
             backgroundColor: "#f9fafb",
@@ -916,13 +1132,12 @@ export const ProjectStatusPage = ({ onClose }) => {
           }}>
             <div>Project</div>
             <div>Process</div>
-            <div style={{ textAlign: "right" }}>Total</div>
+            <div style={{ textAlign: "right" }}>Total Task</div>
             <div style={{ textAlign: "right" }}>Pending</div>
             <div style={{ textAlign: "right" }}>Complete</div>
             <div style={{ textAlign: "right" }}>Active</div>
             <div style={{ textAlign: "right" }}>Complete Percentage</div>
             <div style={{ textAlign: "right" }}>Users</div>
-            <div style={{ textAlign: "right" }}>Batches</div>
           </div>
         )}
 
@@ -947,20 +1162,268 @@ export const ProjectStatusPage = ({ onClose }) => {
             </div>
           ) : selectedMainTab === "Users Status" ? (
             <div style={{
-              padding: "40px",
+              padding: "20px",
+            }}>
+              {/* Users Status Header */}
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "24px"
+              }}>
+                <h2 style={{
+                  fontSize: "18px",
+                  fontWeight: "600",
+                  color: "#1a1a1a",
+                  margin: "0"
+                }}>All Users Work Status</h2>
+              </div>
+
+              {/* Users List */}
+              <div style={{
+                marginTop: "20px"
+              }}>
+                {usersLoading ? (
+                  <div style={{
               textAlign: "center",
               color: "#6b7280",
-            }}>
-              No reports generated.
+                    fontSize: "14px",
+                    padding: "20px 0"
+                  }}>
+                    Loading users...
+                  </div>
+                ) : usersData.length > 0 ? (
+                  <div style={{
+                    display: "grid",
+                    gap: "6px"
+                  }}>
+                    {usersData.filter((userData) => {
+                      const displayedUser = userData.user || userData;
+                      
+                      // Determine current logged-in user's role
+                      const isAdmin = hasRole('admin') || user?.email === 'dhaneshwari.tosscss@gmail.com';
+                      const isClient = !isAdmin;
+                      
+                      if (isClient && user) {
+                        // Client sees users they created (including themselves) - same as AssignRole page
+                        const isCreatedByClient = displayedUser.created_by === user.id;
+                        const isClientSelf = displayedUser.id === user.id;
+                        
+                        return isCreatedByClient || isClientSelf;
+                      }
+                      
+                      // Admin sees all users
+                      return true;
+                    }).filter((userData) => {
+                      // Apply search filter
+                      if (!searchTerm) return true;
+                      
+                      const displayedUser = userData.user || userData;
+                      const searchLower = searchTerm.toLowerCase();
+                      
+                      return displayedUser.username?.toLowerCase().includes(searchLower) ||
+                             displayedUser.email?.toLowerCase().includes(searchLower) ||
+                             displayedUser.first_name?.toLowerCase().includes(searchLower) ||
+                             displayedUser.last_name?.toLowerCase().includes(searchLower);
+                    }).map((userData) => {
+                      const user = userData.user || userData; // Handle both data structures
+                      const isProjectsExpanded = expandedSections[`${user.id}-projects`];
+                      const userAssignments = userProjectAssignments[user.id] || [];
+                      const userProjects = projects.filter(project => userAssignments.includes(project.id));
+
+                      return (
+                        <div key={`user-${user.id}`} style={{
+                          padding: "8px",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "12px",
+                          background: "#ffffff",
+                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+                          transition: "all 0.2s ease",
+                          marginBottom: "4px"
+                        }}>
+                          {/* User Header */}
+                          <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            marginBottom: "8px"
+                          }}>
+                            {/* User Info */}
+                            <div style={{
+                              flex: 1,
+                              minWidth: 0
+                            }}>
+                              <div style={{
+                                fontSize: "16px",
+                                fontWeight: "600",
+                                color: "#1a1a1a",
+                                marginBottom: "4px",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis"
+                              }}>
+                                {user.email}
+                              </div>
+                              <div style={{
+                                fontSize: "14px",
+                                color: "#6b7280",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px"
+                              }}>
+                                <span>📅</span>
+                                {user.date_joined ? new Date(user.date_joined).toLocaleDateString('en-GB') : 
+                                 user.last_activity ? new Date(user.last_activity).toLocaleDateString('en-GB') : 
+                                 'Date not available'}
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div style={{
+                              display: "flex",
+                              gap: "10px",
+                              justifyContent: "center",
+                              flex: 1
+                            }}>
+                              {/* Projects Button */}
+                              <button
+                                onClick={() => toggleSection(user.id, 'projects')}
+                                style={{
+                                  padding: "6px 8px",
+                                  border: "1px solid #e5e7eb",
+                                  borderRadius: "6px",
+                                  background: isProjectsExpanded ? "rgb(25, 44, 89)" : "#f9fafb",
+                                  color: isProjectsExpanded ? "white" : "black",
+                                  fontSize: "12px",
+                                  fontWeight: "500",
+                                  cursor: "pointer",
+                                  transition: "all 0.2s ease",
+                                  outline: "none",
+                                  borderColor: "#e5e7eb",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "4px"
+                                }}
+                              >
+                                Projects ({userProjects.length})
+                              </button>
+                            </div>
+
+                            {/* Status */}
+                            <div style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              flex: 0.5,
+                              justifyContent: "flex-end"
+                            }}>
+                              <span style={{
+                                fontSize: "14px",
+                                fontWeight: "500",
+                                color: "#1a1a1a"
+                              }}>Status: Active</span>
+                              <div style={{
+                                width: "8px",
+                                height: "8px",
+                                backgroundColor: "#10b981",
+                                borderRadius: "50%"
+                              }}></div>
+                            </div>
+                          </div>
+
+                          {/* Expanded Projects Section */}
+                          {isProjectsExpanded && (
+                            <div style={{
+                              marginTop: "12px",
+                              padding: "12px",
+                              backgroundColor: "#f9fafb",
+                              borderRadius: "8px",
+                              border: "1px solid #e5e7eb"
+                            }}>
+                              <h4 style={{
+                                fontSize: "14px",
+                                fontWeight: "600",
+                                color: "#1a1a1a",
+                                marginBottom: "8px"
+                              }}>Assigned Projects:</h4>
+                              {userProjects.length > 0 ? (
+                                <div style={{
+                                  display: "grid",
+                                  gap: "8px"
+                                }}>
+                                  {userProjects.map((project) => (
+                                    <div key={project.id} style={{
+                                      padding: "8px",
+                                      backgroundColor: "white",
+                                      border: "1px solid #e5e7eb",
+                                      borderRadius: "6px",
+                                      fontSize: "12px"
+                                    }}>
+                                      <div style={{ fontWeight: "500", color: "#1a1a1a" }}>
+                                        {project.title}
+                                      </div>
+                                      <div style={{ color: "#6b7280", marginTop: "2px" }}>
+                                        Tasks: {project.task_number || 0} | Completed: {project.finished_task_number || 0}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div style={{
+                                  color: "#6b7280",
+                                  fontSize: "12px",
+                                  fontStyle: "italic"
+                                }}>
+                                  No projects assigned
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div style={{
+                    textAlign: "center",
+                    color: "#6b7280",
+                    fontSize: "14px",
+                    padding: "20px 0"
+                  }}>
+                    No users found
+                  </div>
+                )}
+              </div>
             </div>
           ) : selectedMainTab === "Users Target" ? (
             <div style={{
               padding: "20px",
             }}>
+              {/* Users Target Header */}
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "24px"
+              }}>
+                <h2 style={{
+                  fontSize: "18px",
+                  fontWeight: "600",
+                  color: "#1a1a1a",
+                  margin: "0"
+                }}>User Targets & Assigned Projects</h2>
+              </div>
+
               {/* Users Target Table */}
               <div style={{
+                backgroundColor: "#ffffff",
+                border: "1px solid #e5e7eb",
+                borderRadius: "8px",
+                overflow: "hidden",
+              }}>
+              <div style={{
                 display: "grid",
-                gridTemplateColumns: "2fr 1fr 1fr 1fr",
+                  gridTemplateColumns: "2fr 1.5fr 1fr 1fr",
                 gap: "16px",
                 padding: "16px",
                 backgroundColor: "#f8fafc",
@@ -969,18 +1432,39 @@ export const ProjectStatusPage = ({ onClose }) => {
                 fontSize: "14px",
                 color: "#374151",
               }}>
-                <div>Users</div>
-                <div style={{ textAlign: "right" }}>Achieved Transaction</div>
-                <div style={{ textAlign: "right" }}>Transaction Target</div>
-                <div style={{ textAlign: "right" }}>AHT Target(SLA)</div>
+                  <div>User</div>
+                  <div>Assigned Projects</div>
+                  <div style={{ textAlign: "center" }}>Target Status</div>
+                  <div style={{ textAlign: "center" }}>Target Value</div>
               </div>
               
-              {userTargetsData.map((user, index) => (
-                <div
-                  key={user.id}
+                {usersLoading ? (
+                  <div style={{
+                    textAlign: "center",
+                    color: "#6b7280",
+                    fontSize: "14px",
+                    padding: "40px 0"
+                  }}>
+                    Loading user targets...
+                  </div>
+                ) : userTargetsWithProjects.length > 0 ? (
+                  userTargetsWithProjects.filter((userData) => {
+                    // Apply search filter
+                    if (!searchTerm) return true;
+                    
+                    const displayedUser = userData.user;
+                    const searchLower = searchTerm.toLowerCase();
+                    
+                    return displayedUser.username?.toLowerCase().includes(searchLower) ||
+                           displayedUser.email?.toLowerCase().includes(searchLower) ||
+                           displayedUser.first_name?.toLowerCase().includes(searchLower) ||
+                           displayedUser.last_name?.toLowerCase().includes(searchLower);
+                  }).map((userData, index) => (
+                    <div
+                      key={userData.user.id}
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "2fr 1fr 1fr 1fr",
+                        gridTemplateColumns: "2fr 1.5fr 1fr 1fr",
                     gap: "16px",
                     padding: "16px",
                     backgroundColor: index % 2 === 0 ? "#ffffff" : "#f9fafb",
@@ -989,12 +1473,90 @@ export const ProjectStatusPage = ({ onClose }) => {
                     color: "#374151",
                   }}
                 >
-                  <div style={{ fontWeight: "500" }}>{user.username}</div>
-                  <div style={{ textAlign: "right", color: "#3b82f6" }}>{user.achievedTransaction}</div>
-                  <div style={{ textAlign: "right", color: "#3b82f6" }}>{user.transactionTarget}</div>
-                  <div style={{ textAlign: "right", color: "#3b82f6" }}>{user.ahtTarget}</div>
+                      {/* User Info */}
+                      <div>
+                        <div style={{ fontWeight: "500", marginBottom: "4px" }}>
+                          {userData.user.first_name && userData.user.last_name 
+                            ? `${userData.user.first_name} ${userData.user.last_name}`
+                            : userData.user.username || userData.user.email || 'Unknown User'
+                          }
                 </div>
-              ))}
+                        <div style={{ fontSize: "12px", color: "#6b7280" }}>
+                          {userData.user.email || 'No email'}
+                        </div>
+                      </div>
+                      
+                      {/* Assigned Projects */}
+                      <div>
+                        {userData.projects.length > 0 ? (
+                          <div>
+                            <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>
+                              {userData.projects.length} project(s) assigned
+                            </div>
+                            <div style={{ fontSize: "12px" }}>
+                              {userData.projects.slice(0, 2).map(project => project.title).join(", ")}
+                              {userData.projects.length > 2 && ` +${userData.projects.length - 2} more`}
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: "12px", color: "#6b7280" }}>
+                            No projects assigned
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Target Status */}
+                      <div style={{ textAlign: "center" }}>
+                        {userData.target ? (
+                          <span style={{
+                            backgroundColor: "#10b981",
+                            color: "white",
+                            padding: "4px 8px",
+                            borderRadius: "4px",
+                            fontSize: "12px",
+                            fontWeight: "500"
+                          }}>
+                            Set
+                          </span>
+                        ) : (
+                          <span style={{
+                            backgroundColor: "#6b7280",
+                            color: "white",
+                            padding: "4px 8px",
+                            borderRadius: "4px",
+                            fontSize: "12px",
+                            fontWeight: "500"
+                          }}>
+                            Not Set
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Target Value */}
+                      <div style={{ textAlign: "center" }}>
+                        {userData.target ? (
+                          <div style={{ color: "#3b82f6", fontWeight: "500" }}>
+                            {userData.target}
+                          </div>
+                        ) : (
+                          <div style={{ color: "#6b7280" }}>
+                            -
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{
+                    textAlign: "center",
+                    color: "#6b7280",
+                    fontSize: "14px",
+                    padding: "40px 0"
+                  }}>
+                    No user targets found
+                  </div>
+                )}
+              </div>
             </div>
           ) : selectedMainTab === "Billing Report" ? (
             <div style={{
@@ -1126,7 +1688,7 @@ export const ProjectStatusPage = ({ onClose }) => {
                   key={project.id}
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "2fr 1.5fr 80px 80px 80px 80px 120px 80px 80px",
+                    gridTemplateColumns: "2fr 1.5fr 80px 80px 80px 80px 120px 80px",
                     gap: "16px",
                     padding: "16px 20px",
                     borderBottom: index < filteredProjects.length - 1 ? "1px solid #f3f4f6" : "none",
@@ -1159,20 +1721,24 @@ export const ProjectStatusPage = ({ onClose }) => {
                   </div>
 
                   {/* Pending */}
-                  <div style={{
+                  <div 
+                    style={{
                     textAlign: "right",
                     color: "#3b82f6",
                     fontWeight: "500",
-                  }}>
+                    }}
+                  >
                     {stats.pending}
                   </div>
 
                   {/* Complete */}
-                  <div style={{
+                  <div 
+                    style={{
                     textAlign: "right",
                     color: "#3b82f6",
                     fontWeight: "500",
-                  }}>
+                    }}
+                  >
                     {stats.complete}
                   </div>
 
@@ -1195,19 +1761,18 @@ export const ProjectStatusPage = ({ onClose }) => {
                   </div>
 
                   {/* Users */}
-                  <div style={{
+                  <div 
+                    onClick={() => fetchProjectUsers(project.id, project.title || `Project ${project.id}`)}
+                    style={{
                     textAlign: "right",
-                    color: "#6b7280",
-                  }}>
+                      color: "#3b82f6",
+                      cursor: "pointer",
+                      fontWeight: "500",
+                      textDecoration: "underline",
+                    }}
+                    title="Click to view assigned users"
+                  >
                     {stats.users} USER{stats.users !== 1 ? 'S' : ''}
-                  </div>
-
-                  {/* Batches */}
-                  <div style={{
-                    textAlign: "right",
-                    color: "#6b7280",
-                  }}>
-                    {stats.batches} BATCH{stats.batches !== 1 ? 'ES' : ''}
                   </div>
                 </div>
               );
@@ -1435,6 +2000,511 @@ export const ProjectStatusPage = ({ onClose }) => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* User Modal */}
+      {showUserModal && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+        }}>
+          <div style={{
+            width: "500px",
+            maxHeight: "600px",
+            background: "#fff",
+            borderRadius: "12px",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+            padding: "20px",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: "20px",
+              paddingBottom: "12px",
+              borderBottom: "1px solid #e5e7eb",
+            }}>
+              <h3 style={{
+                margin: 0,
+                fontSize: "18px",
+                fontWeight: "600",
+                color: "#1f2937",
+              }}>
+                Users assigned to "{selectedProjectTitle}"
+              </h3>
+              <button
+                onClick={() => setShowUserModal(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "4px",
+                  borderRadius: "4px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <IconClose />
+              </button>
+            </div>
+
+            {/* User List */}
+            <div style={{
+              flex: 1,
+              overflowY: "auto",
+              paddingRight: "8px",
+            }}>
+              {selectedProjectUsers.length === 0 ? (
+                <div style={{
+                  textAlign: "center",
+                  color: "#6b7280",
+                  padding: "40px 20px",
+                }}>
+                  No users assigned to this project
+                </div>
+              ) : (
+                selectedProjectUsers.map((user, index) => (
+                  <div
+                    key={user.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      padding: "12px 16px",
+                      borderBottom: index < selectedProjectUsers.length - 1 ? "1px solid #f3f4f6" : "none",
+                      borderRadius: "8px",
+                      marginBottom: index < selectedProjectUsers.length - 1 ? "8px" : "0",
+                    }}
+                  >
+                    {/* User Avatar */}
+                    <div style={{
+                      width: "40px",
+                      height: "40px",
+                      borderRadius: "50%",
+                      background: "#3b82f6",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#fff",
+                      fontWeight: "600",
+                      fontSize: "16px",
+                      marginRight: "12px",
+                    }}>
+                      {user.first_name ? user.first_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                    </div>
+
+                    {/* User Info */}
+                    <div style={{ flex: 1 }}>
+                      <div style={{
+                        fontWeight: "500",
+                        color: "#1f2937",
+                        fontSize: "14px",
+                        marginBottom: "2px",
+                      }}>
+                        {user.first_name && user.last_name 
+                          ? `${user.first_name} ${user.last_name}`
+                          : user.email
+                        }
+                      </div>
+                      <div style={{
+                        color: "#6b7280",
+                        fontSize: "12px",
+                      }}>
+                        {user.email}
+                      </div>
+                    </div>
+
+                    {/* Role Badge */}
+                    <div style={{
+                      background: "#f3f4f6",
+                      color: "#374151",
+                      padding: "4px 8px",
+                      borderRadius: "4px",
+                      fontSize: "12px",
+                      fontWeight: "500",
+                    }}>
+                      {user.id === projects.find(p => p.title === selectedProjectTitle)?.created_by?.id ? "Creator" : "User"}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              paddingTop: "16px",
+              borderTop: "1px solid #e5e7eb",
+              display: "flex",
+              justifyContent: "flex-end",
+            }}>
+              <button
+                onClick={() => setShowUserModal(false)}
+                style={{
+                  background: "#6b7280",
+                  color: "#fff",
+                  border: "none",
+                  padding: "8px 16px",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Task Modal */}
+      {showTaskModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "20px",
+        }}>
+          <div style={{
+            backgroundColor: "white",
+            borderRadius: "12px",
+            width: "100%",
+            maxWidth: "800px",
+            maxHeight: "80vh",
+            display: "flex",
+            flexDirection: "column",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: "24px 24px 16px 24px",
+              borderBottom: "1px solid #e5e7eb",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}>
+              <div>
+                <h2 style={{
+                  fontSize: "20px",
+                  fontWeight: "600",
+                  color: "#1f2937",
+                  margin: 0,
+                  marginBottom: "4px",
+                }}>
+                  {selectedTaskType === "completed" ? "Completed Tasks" : "Pending Tasks"}
+                </h2>
+                <p style={{
+                  fontSize: "14px",
+                  color: "#6b7280",
+                  margin: 0,
+                }}>
+                  Project: {selectedProjectForTasks?.title}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowTaskModal(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "8px",
+                  borderRadius: "6px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#6b7280",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#f3f4f6";
+                  e.currentTarget.style.color = "#374151";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                  e.currentTarget.style.color = "#6b7280";
+                }}
+              >
+                <IconClose style={{ width: "20px", height: "20px" }} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div style={{
+              flex: 1,
+              overflow: "auto",
+              padding: "0 24px",
+            }}>
+              {tasksLoading ? (
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "40px",
+                  color: "#6b7280",
+                }}>
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                  }}>
+                    <div style={{
+                      width: "20px",
+                      height: "20px",
+                      border: "2px solid #e5e7eb",
+                      borderTop: "2px solid #3b82f6",
+                      borderRadius: "50%",
+                      animation: "spin 1s linear infinite",
+                    }} />
+                    Loading tasks...
+                  </div>
+                </div>
+              ) : tasksData.length === 0 ? (
+                <div style={{
+                  padding: "40px",
+                  textAlign: "center",
+                  color: "#6b7280",
+                }}>
+                  <div style={{
+                    fontSize: "16px",
+                    fontWeight: "500",
+                    marginBottom: "8px",
+                  }}>
+                    No {selectedTaskType} tasks found
+                  </div>
+                  <div style={{
+                    fontSize: "14px",
+                    color: "#9ca3af",
+                  }}>
+                    This project has no {selectedTaskType} tasks at the moment.
+                  </div>
+                </div>
+              ) : (
+                <div style={{
+                  padding: "16px 0",
+                }}>
+                  {/* Tasks Table */}
+                  <div style={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "8px",
+                    overflow: "hidden",
+                  }}>
+                    {/* Table Header */}
+                    <div style={{
+                      backgroundColor: "#f9fafb",
+                      padding: "12px 16px",
+                      borderBottom: "1px solid #e5e7eb",
+                      display: "grid",
+                      gridTemplateColumns: "80px 120px 1fr 100px 100px",
+                      gap: "16px",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      color: "#374151",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}>
+                      <div>ID</div>
+                      <div>Image</div>
+                      <div>Task Data</div>
+                      <div>Status</div>
+                      <div>Date</div>
+                    </div>
+
+                    {/* Table Body */}
+                    {tasksData.map((task, index) => {
+                      // Determine task status
+                      const hasAnnotations = (task.annotations && task.annotations.length > 0) || 
+                                           (task.annotations_count && task.annotations_count > 0) ||
+                                           (task.annotations_results && task.annotations_results.length > 0);
+                      const status = hasAnnotations ? "Completed" : "Pending";
+                      const statusColor = hasAnnotations ? "#10b981" : "#f59e0b";
+                      
+                      // Extract image URL from task data
+                      let imageUrl = null;
+                      if (task.data) {
+                        if (typeof task.data === 'string') {
+                          try {
+                            const parsedData = JSON.parse(task.data);
+                            imageUrl = parsedData.image || parsedData.url || parsedData.src;
+                          } catch (e) {
+                            // If not JSON, check if it's a direct URL
+                            if (task.data.startsWith('http')) {
+                              imageUrl = task.data;
+                            }
+                          }
+                        } else if (typeof task.data === 'object') {
+                          imageUrl = task.data.image || task.data.url || task.data.src;
+                        }
+                      }
+                      
+                      return (
+                        <div
+                          key={task.id}
+                          style={{
+                            padding: "16px",
+                            borderBottom: index < tasksData.length - 1 ? "1px solid #f3f4f6" : "none",
+                            display: "grid",
+                            gridTemplateColumns: "80px 120px 1fr 100px 100px",
+                            gap: "16px",
+                            alignItems: "center",
+                            transition: "background-color 0.2s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = "#f9fafb";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "transparent";
+                          }}
+                        >
+                          {/* Task ID */}
+                          <div style={{
+                            fontSize: "14px",
+                            fontWeight: "500",
+                            color: "#1f2937",
+                          }}>
+                            {task.id}
+                          </div>
+
+                          {/* Task Image */}
+                          <div style={{
+                            width: "100px",
+                            height: "60px",
+                            borderRadius: "6px",
+                            overflow: "hidden",
+                            backgroundColor: "#f3f4f6",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}>
+                            {imageUrl ? (
+                              <img
+                                src={imageUrl}
+                                alt={`Task ${task.id}`}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "cover",
+                                }}
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                  e.currentTarget.nextSibling.style.display = "flex";
+                                }}
+                              />
+                            ) : null}
+                            <div style={{
+                              display: imageUrl ? "none" : "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "12px",
+                              color: "#9ca3af",
+                              width: "100%",
+                              height: "100%",
+                            }}>
+                              No Image
+                            </div>
+                          </div>
+
+                          {/* Task Data */}
+                          <div style={{
+                            fontSize: "14px",
+                            color: "#374151",
+                            wordBreak: "break-word",
+                          }}>
+                            {task.data ? (
+                              typeof task.data === 'string' ? 
+                                task.data.substring(0, 80) + (task.data.length > 80 ? '...' : '') :
+                                JSON.stringify(task.data).substring(0, 80) + (JSON.stringify(task.data).length > 80 ? '...' : '')
+                            ) : 'No data'}
+                          </div>
+
+                          {/* Status */}
+                          <div style={{
+                            fontSize: "12px",
+                            fontWeight: "500",
+                            color: statusColor,
+                            backgroundColor: statusColor === "#10b981" ? "#d1fae5" : "#fef3c7",
+                            padding: "4px 8px",
+                            borderRadius: "12px",
+                            textAlign: "center",
+                          }}>
+                            {status}
+                          </div>
+
+                          {/* Date */}
+                          <div style={{
+                            fontSize: "12px",
+                            color: "#6b7280",
+                          }}>
+                            {task.created_at ? new Date(task.created_at).toLocaleDateString('en-GB') : 'N/A'}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: "16px 24px",
+              borderTop: "1px solid #e5e7eb",
+              backgroundColor: "#f9fafb",
+              borderRadius: "0 0 12px 12px",
+            }}>
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}>
+                <div style={{
+                  fontSize: "14px",
+                  color: "#6b7280",
+                }}>
+                  {tasksData.length} {selectedTaskType} task{tasksData.length !== 1 ? 's' : ''} found
+                </div>
+                <button
+                  onClick={() => setShowTaskModal(false)}
+                  style={{
+                    padding: "8px 16px",
+                    backgroundColor: "#3b82f6",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    fontWeight: "500",
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* CSS for spinner animation */}
+          <style jsx>{`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
         </div>
       )}
     </div>

@@ -153,6 +153,9 @@ def user_login(request):
                 request.session['keep_me_logged_in'] = False
                 request.session.set_expiry(0)
 
+            # Update user's last activity when they log in
+            user.update_last_activity()
+            
             # user is organization member
             org_pk = Organization.find_by_user(user).pk
             user.active_organization_id = org_pk

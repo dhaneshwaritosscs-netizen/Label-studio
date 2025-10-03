@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAPI } from "../../providers/ApiProvider";
 import { useCurrentUser } from "../../providers/CurrentUser";
+import { TopNavigationBar } from "../../components/TopNavigationBar";
 
 export const RolesManagement = () => {
   const api = useAPI();
@@ -349,6 +350,9 @@ export const RolesManagement = () => {
 
   return (
     <div style={styles.page}>
+      {/* Top Navigation Bar */}
+      <TopNavigationBar />
+      
       {/* Navigation Tabs */}
       <div style={styles.tabsContainer}>
         {tabs.map(tab => (

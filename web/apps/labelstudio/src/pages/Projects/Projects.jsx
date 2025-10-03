@@ -36,8 +36,11 @@ export const ProjectsPage = () => {
   const [modal, setModal] = React.useState(false);
 
   // Check if user is admin or client
-  const isAdmin = hasRole('admin') || currentUser?.email === 'dhaneshwari.tosscss@gmail.com';
+  const isAdmin = hasRole('admin');
   const isClient = !isAdmin; // If not admin, consider as client
+  
+  // Check if user is the specific admin
+  const isSpecificAdmin = currentUser?.email === 'dhaneshwari.tosscss@gmail.com';
 
   // Debug user roles
   console.log("User roles:", userRoles);
@@ -204,8 +207,8 @@ export const ProjectsPage = () => {
   React.useEffect(() => {
     // there is a nice page with Create button when list is empty
     // so don't show the context button in that case
-    setContextProps({ openModal, showButton: projectsList.length > 0 && isAdmin });
-  }, [projectsList.length, isAdmin]);
+    setContextProps({ openModal, showButton: projectsList.length > 0 && isSpecificAdmin });
+  }, [projectsList.length, isSpecificAdmin]);
 
   // All users see their assigned projects
   return (
@@ -249,7 +252,7 @@ export const ProjectsPage = () => {
           justifyContent: "center",
           flexWrap: "wrap",
         }}>
-          {isAdmin && (
+          {isSpecificAdmin && (
             <Button 
               onClick={openModal} 
               look="primary" 
@@ -316,7 +319,7 @@ export const ProjectsPage = () => {
           pageSize={defaultPageSize}
         />
       ) : (
-        <EmptyProjectsList openModal={openModal} />
+        <EmptyProjectsList openModal={openModal} showCreateButton={isSpecificAdmin} />
       )}
       {modal && <CreateProject onClose={closeModal} />}
     </Block>

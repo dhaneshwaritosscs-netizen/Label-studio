@@ -4,6 +4,7 @@ import { DangerZone } from "./DangerZone";
 import { GeneralSettings } from "./GeneralSettings";
 import { AnnotationSettings } from "./AnnotationSettings";
 import { LabelingSettings } from "./LabelingSettings";
+import { QCRSettings } from "./QCRSettings";
 import { MachineLearningSettings } from "./MachineLearningSettings/MachineLearningSettings";
 import { PredictionsSettings } from "./PredictionsSettings/PredictionsSettings";
 import { StorageSettings } from "./StorageSettings/StorageSettings";
@@ -22,6 +23,7 @@ export const MenuLayout = ({ children, ...routeProps }) => {
   const roleToSettingsMap = {
     'general': GeneralSettings,
     'labeling-interface': LabelingSettings,
+    'qcr': QCRSettings,
     'annotation': AnnotationSettings,
     'model': MachineLearningSettings,
     'predictions': PredictionsSettings,
@@ -99,6 +101,9 @@ const getFilteredPages = (userRoles = []) => {
   if (userRoleNames.includes('labeling-interface')) {
     pages.LabelingSettings = LabelingSettings;
   }
+  if (userRoleNames.includes('qcr')) {
+    pages.QCRSettings = QCRSettings;
+  }
   if (userRoleNames.includes('annotation')) {
     pages.AnnotationSettings = AnnotationSettings;
   }
@@ -137,7 +142,7 @@ const DynamicSettingsComponent = (props) => {
   
   // Check if user has any settings roles
   const hasAnySettingsRole = userRoleNames.some(roleName => 
-    ['general', 'labeling-interface', 'annotation', 'model', 'predictions', 'cloud-storage', 'webhooks', 'danger-zone'].includes(roleName)
+    ['general', 'labeling-interface', 'qcr', 'annotation', 'model', 'predictions', 'cloud-storage', 'webhooks', 'danger-zone'].includes(roleName)
   );
   
   if (!hasAnySettingsRole) {
@@ -166,6 +171,9 @@ const DynamicSettingsComponent = (props) => {
   }
   if (userRoleNames.includes('labeling-interface')) {
     return <LabelingSettings {...props} />;
+  }
+  if (userRoleNames.includes('qcr')) {
+    return <QCRSettings {...props} />;
   }
   if (userRoleNames.includes('annotation')) {
     return <AnnotationSettings {...props} />;
@@ -198,6 +206,7 @@ export const SettingsPage = {
   component: DynamicSettingsComponent,
   pages: {
     LabelingSettings,
+    QCRSettings,
     AnnotationSettings,
     MachineLearningSettings,
     PredictionsSettings,

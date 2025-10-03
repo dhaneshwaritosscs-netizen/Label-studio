@@ -7,7 +7,7 @@ from rest_framework.routers import DefaultRouter
 from .role_assignment_api import RoleAssignmentAPIView, RoleAssignmentViewSet
 from .role_api import RoleViewSet, UserRoleAssignmentViewSet
 from .access_api import UserRoleViewSet, UserAccessViewSet
-from .server_response_api import ServerResponseAPIView, RoleAssignmentResponseAPIView, APIStatusView, UserRolesAPIView, simple_user_roles_view
+from .server_response_api import ServerResponseAPIView, RoleAssignmentResponseAPIView, APIStatusView, UserRolesAPIView, SimpleUserRolesAPIView, simple_user_roles_view
 
 app_name = 'role_management'
 
@@ -28,7 +28,8 @@ urlpatterns = [
     path('api/role-assignment-enhanced/', RoleAssignmentResponseAPIView.as_view(), name='role-assignment-enhanced'),
     path('api/status/', APIStatusView.as_view(), name='api-status'),
     path('api/user-roles/', UserRolesAPIView.as_view(), name='user-roles'),
-    path('api/simple-user-roles/', simple_user_roles_view, name='simple-user-roles'),
+    path('api/simple-user-roles/', SimpleUserRolesAPIView.as_view(), name='simple-user-roles'),
+    path('api/simple-user-roles-function/', simple_user_roles_view, name='simple-user-roles-function'),
 
     # Additional endpoints
     path('api/roles/<int:pk>/users/', RoleViewSet.as_view({'get': 'users'}), name='role-users'),

@@ -84,7 +84,11 @@ export const ExportPage = () => {
           },
         })
         .then(({ export_files }) => {
-          setPreviousExports(export_files.slice(0, 1));
+          setPreviousExports(export_files?.slice(0, 1) || []);
+        })
+        .catch((error) => {
+          console.error("Error fetching previous exports:", error);
+          setPreviousExports([]);
         });
 
       api
@@ -94,8 +98,13 @@ export const ExportPage = () => {
           },
         })
         .then((formats) => {
-          setAvailableFormats(formats);
-          setCurrentFormat(formats[0]?.name);
+          setAvailableFormats(formats || []);
+          setCurrentFormat(formats?.[0]?.name || "JSON");
+        })
+        .catch((error) => {
+          console.error("Error fetching export formats:", error);
+          setAvailableFormats([]);
+          setCurrentFormat("JSON");
         });
     }
   }, [pageParams]);
@@ -149,7 +158,7 @@ const FormatInfo = ({ availableFormats, selected, onClick }) => {
     <Block name="formats">
       <Elem name="info">You can export dataset in one of the following formats:</Elem>
       <Elem name="list">
-        {availableFormats.map((format) => (
+        {availableFormats && availableFormats.map((format) => (
           <Elem
             key={format.name}
             name="item"

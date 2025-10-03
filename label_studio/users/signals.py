@@ -14,15 +14,48 @@ User = get_user_model()
 @receiver(post_save, sender=User)
 def assign_default_role_to_new_user(sender, instance, created, **kwargs):
     """
-    Automatically assign client role to new users when they are created.
-    Skip if user is the admin email.
+    Automatically assign appropriate role to new users when they are created.
+    Skip if user is the admin email or if role is already assigned via API.
     """
     if created and instance.email != 'dhaneshwari.tosscss@gmail.com':
-        try:
-            # Get client role
-            client_role = Role.objects.get(name='client')
+        # Skip if role is already assigned (e.g., via API)
+        if UserRoleAssignment.objects.filter(user=instance, is_active=True).exists():
+            return
             
-            # Assign client role to new user
+        try:
+            # Create default roles if they don't exist
+            user_role, _ = Role.objects.get_or_create(
+                name='User',
+                defaults={
+                    'display_name': 'User',
+                    'description': 'Regular user role',
+                    'role_type': 'system',
+                    'is_active': True
+                }
+            )
+            
+            client_role, _ = Role.objects.get_or_create(
+                name='Client',
+                defaults={
+                    'display_name': 'Client',
+                    'description': 'Client user role',
+                    'role_type': 'system',
+                    'is_active': True
+                }
+            )
+            
+            admin_role, _ = Role.objects.get_or_create(
+                name='Administrator',
+                defaults={
+                    'display_name': 'Administrator',
+                    'description': 'Administrator role',
+                    'role_type': 'system',
+                    'is_active': True
+                }
+            )
+            
+            # For signup-created users, assign Client role by default
+            # This ensures they have access to Assign Role page
             UserRoleAssignment.objects.get_or_create(
                 user=instance,
                 role=client_role,
@@ -30,13 +63,10 @@ def assign_default_role_to_new_user(sender, instance, created, **kwargs):
                     'assigned_by': None,  # System assignment
                     'assigned_at': timezone.now(),
                     'is_active': True,
-                    'notes': 'Default client role assignment for new user'
+                    'notes': 'Default Client role assignment for signup user'
                 }
             )
             
-        except Role.DoesNotExist:
-            # Client role doesn't exist yet, skip assignment
-            pass
         except Exception as e:
             # Log error but don't fail user creation
             import logging

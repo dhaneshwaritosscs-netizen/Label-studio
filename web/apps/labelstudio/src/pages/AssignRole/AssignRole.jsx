@@ -29,7 +29,22 @@ export const AssignRole = () => {
 
   // Determine user role
   const isAdmin = hasRole('admin') || user?.email === 'dhaneshwari.tosscss@gmail.com';
-  const isClient = !isAdmin && user;
+  const isClient = hasRole('client') || user?.email === 'dhaneshwari.ttosscss@gmail.com';
+  const isUser = hasRole('user');
+  
+  // Debug role detection
+  console.log('DEBUG: Current user:', user?.email);
+  console.log('DEBUG: isAdmin:', isAdmin);
+  console.log('DEBUG: isClient:', isClient);
+  console.log('DEBUG: isUser:', isUser);
+  console.log('DEBUG: hasRole("admin"):', hasRole('admin'));
+  console.log('DEBUG: hasRole("client"):', hasRole('client'));
+  console.log('DEBUG: hasRole("user"):', hasRole('user'));
+  
+  // Get more detailed role info from existing useUserRoles hook
+  const { userRoles, loadingRoles } = useUserRoles();
+  console.log('DEBUG: userRoles array:', userRoles);
+  console.log('DEBUG: loadingRoles:', loadingRoles);
 
   // Access control: Show restricted view for client users
   // Clients can see user list but cannot access role assignment functionality
@@ -49,7 +64,7 @@ export const AssignRole = () => {
     }
     // Admin sees all users (no additional filtering needed)
     
-    // Search term filtering - EXACT MATCHING ONLY
+    // Search term filtering - LETTER MATCHING (partial matching)
     if (!searchTerm) return true;
     
     const email = userData.email?.toLowerCase() || "";
@@ -59,17 +74,25 @@ export const AssignRole = () => {
     
     const searchLower = searchTerm.toLowerCase().trim();
     
-    // Only return true if search term EXACTLY matches email, user ID, or date
-    return email === searchLower || 
-           userId === searchLower ||
-           dateJoined === searchLower || 
-           lastActivity === searchLower;
+    // Return true if search term is found in email, user ID, or date (partial matching)
+    return email.includes(searchLower) || 
+           userId.includes(searchLower) ||
+           dateJoined.includes(searchLower) || 
+           lastActivity.includes(searchLower);
   });
 
   // Update search active state when search term changes
   useEffect(() => {
     setIsSearchActive(searchTerm.trim().length > 0);
   }, [searchTerm]);
+
+  // Update project count based on search results
+  useEffect(() => {
+    if (searchTerm.trim().length > 0 && filteredUsers.length === 0) {
+      console.log("User not found in search, setting project count to 0");
+      setProjectCount(0);
+    }
+  }, [searchTerm, filteredUsers.length]);
 
   // Force project count to 0 when no users found in search
   useEffect(() => {
@@ -106,31 +129,90 @@ export const AssignRole = () => {
         return;
       }
 
+      // If search is active and no users found, don't fetch anything
+      if (searchTerm.trim().length > 0 && filteredUsers.length === 0) {
+        console.log("Search active but no users found, skipping fetchProjectCount");
+        setProjectCount(0);
+        setProjectsLoading(false);
+        return;
+      }
+
       try {
-        if (isAdmin) {
-          // Admin sees total project count across all users
-          console.log("Fetching total project count for admin");
-          const data = await api.callApi("projects", {
-            params: { 
-              show_all: true,
-              page_size: 1, // We only need the count, not the actual projects
-              include: "id" // Minimal data needed
+        // Calculate total projects from all users in the list
+        let totalProjects = 0;
+        
+        if (filteredUsers.length > 0) {
+          console.log("Calculating total projects from all users in the list...");
+          
+          for (const { user: userData } of filteredUsers) {
+            try {
+              // Get all projects to check both created and assigned
+              const data = await api.callApi("projects", {
+                params: { 
+                  show_all: true,
+                  page_size: 1000,
+                  include: "id,created_by"
+                }
+              });
+              
+              if (data?.results) {
+                // Get user's assigned projects from localStorage
+                const userProjectAssignments = JSON.parse(localStorage.getItem('userProjectAssignments') || '{}');
+                const userAssignments = userProjectAssignments[userData.id] || [];
+                
+                // Count projects: created by user OR assigned to user
+                const userProjects = data.results.filter(project => 
+                  project.created_by?.id === userData.id || 
+                  userAssignments.includes(project.id)
+                );
+                
+                totalProjects += userProjects.length;
+                console.log(`User ${userData.email}: ${userProjects.length} projects (created + assigned)`);
+              }
+            } catch (error) {
+              console.error(`Error fetching projects for user ${userData.email}:`, error);
             }
-          });
-          console.log("Admin projects response:", data);
-          setProjectCount(data?.count ?? 0);
-        } else if (isClient) {
-          // Client sees only their own project count
-          console.log("Fetching project count for client:", user.id);
-          const data = await api.callApi("projects", {
-            params: { 
-              created_by: user.id,
-              page_size: 1, // We only need the count, not the actual projects
-              include: "id" // Minimal data needed
+          }
+          
+          console.log("Total projects from all users:", totalProjects);
+          setProjectCount(totalProjects);
+        } else {
+          // If no users in list, show current user's projects
+          if (isAdmin) {
+            console.log("No users in list, fetching total project count for admin");
+            const data = await api.callApi("projects", {
+              params: { 
+                show_all: true,
+                page_size: 1,
+                include: "id"
+              }
+            });
+            console.log("Admin projects response:", data);
+            setProjectCount(data?.count ?? 0);
+          } else {
+            console.log("No users in list, fetching projects for current user:", user.id);
+            const data = await api.callApi("projects", {
+              params: { 
+                show_all: true,
+                page_size: 1000,
+                include: "id,created_by"
+              }
+            });
+            
+            if (data?.results) {
+              const userProjectAssignments = JSON.parse(localStorage.getItem('userProjectAssignments') || '{}');
+              const userAssignments = userProjectAssignments[user.id] || [];
+              
+              const userProjects = data.results.filter(project => 
+                project.created_by?.id === user.id || 
+                userAssignments.includes(project.id)
+              );
+              
+              setProjectCount(userProjects.length);
+            } else {
+              setProjectCount(0);
             }
-          });
-          console.log("Client projects response:", data);
-          setProjectCount(data?.count ?? 0);
+          }
         }
       } catch (error) {
         console.error("Error fetching project count:", error);
@@ -139,7 +221,7 @@ export const AssignRole = () => {
     };
 
     fetchProjectCount();
-  }, [user, isAdmin, isClient, api]);
+  }, [user, isAdmin, isClient, api, filteredUsers, searchTerm]);
 
   // Additional fix for when search term changes and valid users are found
   useEffect(() => {
@@ -357,10 +439,10 @@ export const AssignRole = () => {
               projectsData[userData.id] = [];
             }
           } else {
-            // For other users, fetch only projects they created
+            // For other users, fetch projects they created AND assigned projects
             projectsResponse = await api.callApi("projects", {
               params: {
-                created_by: userData.id,
+                show_all: true, // Get all projects to check assignments
                 page_size: 1000
               }
             });
@@ -368,8 +450,19 @@ export const AssignRole = () => {
             console.log(`Projects for user ${userData.email} (ID: ${userData.id}):`, projectsResponse);
             
             if (projectsResponse.results) {
-              projectsData[userData.id] = projectsResponse.results;
-              console.log(`Found ${projectsResponse.results.length} projects for user ${userData.email}`);
+              // Get user's assigned projects from localStorage
+              const userProjectAssignments = JSON.parse(localStorage.getItem('userProjectAssignments') || '{}');
+              const userAssignments = userProjectAssignments[userData.id] || [];
+              
+              // Filter projects: created by user OR assigned to user
+              const filteredProjects = projectsResponse.results.filter(project => 
+                project.created_by?.id === userData.id || 
+                userAssignments.includes(project.id)
+              );
+              
+              projectsData[userData.id] = filteredProjects;
+              console.log(`Found ${filteredProjects.length} projects for user ${userData.email} (created + assigned)`);
+              console.log(`User assignments:`, userAssignments);
             } else {
               projectsData[userData.id] = [];
               console.log(`No projects found for user ${userData.email}`);
@@ -410,13 +503,8 @@ export const AssignRole = () => {
         window.location.reload();
         break;
       case 'user':
-        // Navigate to User Role Assignment page - Only for admin users
-        if (isAdmin) {
-          window.location.href = '/user-role-assignment';
-        } else {
-          // For client users, navigate to user list view (ManageUsersPage)
-          window.location.href = '/user-role-assignment#manage-users';
-        }
+        // Navigate to User Role Assignment page - Both admin and client users can access
+        window.location.href = '/user-role-assignment';
         break;
       case 'chart':
         // Navigate to Projects Overview page
@@ -430,10 +518,6 @@ export const AssignRole = () => {
         // Navigate to Project Status page
         window.location.href = '/project-status';
         break;
-      case 'help':
-        // Navigate to Roles management page
-        window.location.href = '/roles-management';
-        break;
       default:
         console.log('Unknown icon clicked');
     }
@@ -446,6 +530,83 @@ export const AssignRole = () => {
       [key]: !prev[key]
     }));
   };
+
+  // Access control: Only admins and clients can access this page, not regular users
+  console.log('DEBUG: Access control check - isAdmin:', isAdmin, 'isClient:', isClient, 'should block:', (!isAdmin && !isClient));
+  
+  // More explicit check: Block if user has 'user' role OR if they don't have admin/client roles
+  const shouldBlockAccess = isUser || (!isAdmin && !isClient);
+  console.log('DEBUG: shouldBlockAccess:', shouldBlockAccess, 'isUser:', isUser);
+  
+  if (shouldBlockAccess) {
+    return (
+      <div style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "100vh",
+        backgroundColor: "#f8fafc",
+        padding: "20px"
+      }}>
+        <div style={{
+          backgroundColor: "#ffffff",
+          border: "1px solid #e5e7eb",
+          borderRadius: "12px",
+          padding: "40px",
+          textAlign: "center",
+          maxWidth: "500px",
+          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)"
+        }}>
+          <div style={{
+            fontSize: "48px",
+            marginBottom: "20px"
+          }}>
+            🚫
+          </div>
+          <h1 style={{
+            fontSize: "24px",
+            fontWeight: "600",
+            color: "#1f2937",
+            marginBottom: "12px"
+          }}>
+            Access Denied
+          </h1>
+          <p style={{
+            fontSize: "16px",
+            color: "#6b7280",
+            marginBottom: "24px",
+            lineHeight: "1.5"
+          }}>
+            You don't have permission to access the User Role Assignment page. 
+            Only administrators and clients can manage user roles and assignments.
+          </p>
+          <button
+            onClick={() => window.location.href = '/projects'}
+            style={{
+              backgroundColor: "#3b82f6",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              padding: "12px 24px",
+              fontSize: "14px",
+              fontWeight: "500",
+              cursor: "pointer",
+              transition: "background-color 0.2s ease"
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#2563eb";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "#3b82f6";
+            }}
+          >
+            Go to Projects
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Block name="assign-role-page">
@@ -691,51 +852,6 @@ export const AssignRole = () => {
               }}>Report</span>
             )}
           </div>
-          <div 
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "6px",
-              cursor: "pointer",
-              padding: "8px 12px",
-              borderRadius: "8px",
-              transition: "all 0.2s ease",
-              position: "relative",
-              background: activeIcon === 'help' ? "#f3f4f6" : "transparent"
-            }}
-            title="Configuration"
-            onClick={() => handleIconClick('help')}
-            onMouseEnter={(e) => {
-              if (activeIcon !== 'help') {
-                e.currentTarget.style.background = "#f3f4f6";
-                e.currentTarget.style.transform = "scale(1.05)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (activeIcon !== 'help') {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.transform = "scale(1)";
-              }
-            }}
-          >
-            <div style={{
-              width: "24px",
-              height: "24px",
-              fontSize: "20px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: activeIcon === 'help' ? "#6366f1" : "#6b7280"
-            }}>🔘</div>
-            {activeIcon === 'help' && (
-              <span style={{
-                fontSize: "12px",
-                color: "#6366f1",
-                fontWeight: "600"
-              }}>Configuration</span>
-            )}
-          </div>
         </div>
 
         {/* Dashboard Metrics */}
@@ -778,7 +894,7 @@ export const AssignRole = () => {
               }}>
                 {isAdmin 
                   ? `Total number of projects across all users.`
-                  : `Number of projects created by you.`
+                  : `Total projects from all users in the list.`
                 }
               </div>
             </div>
@@ -1018,15 +1134,14 @@ export const AssignRole = () => {
                             Roles ({userRolesData[userData.id]?.length || 0})
                           </button>
 
-                          {/* Assign Button - Only show for admin users */}
-                          {isAdmin && (
-                            <button
-                              onClick={() => window.location.href = '/user-role-assignment'}
-                              style={{
-                                padding: "6px 8px",
-                                border: "1px solid #e5e7eb",
-                                borderRadius: "6px",
-                                background: "#f9fafb",
+                          {/* Assign Button - Show for both admin and client users */}
+                          <button
+                            onClick={() => window.location.href = `/user-role-assignment?email=${encodeURIComponent(userData.email)}`}
+                            style={{
+                              padding: "6px 8px",
+                              border: "1px solid #e5e7eb",
+                              borderRadius: "6px",
+                              background: "#f9fafb",
                               color: "black",
                               fontSize: "12px",
                               fontWeight: "500",
@@ -1053,7 +1168,6 @@ export const AssignRole = () => {
                           >
                             Assign
                           </button>
-                          )}
                         </div>
 
                         {/* Status Indicator */}

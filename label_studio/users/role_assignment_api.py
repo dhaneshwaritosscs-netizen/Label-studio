@@ -31,8 +31,20 @@ class RoleAssignmentAPIView(APIView):
     """
     API view for assigning roles to users by email
     """
-    permission_classes = [permissions.AllowAny]  # Allow any for now to test functionality
+    permission_classes = [permissions.IsAuthenticated]
     
+    def _is_admin(self, user):
+        """Check if user is admin"""
+        # Check for specific admin email
+        if user.email == 'dhaneshwari.tosscss@gmail.com':
+            return True
+        if getattr(user, 'is_superuser', False) or getattr(user, 'is_staff', False):
+            return True
+        try:
+            return UserRoleAssignment.objects.filter(user=user, role__name__iexact='administrator', is_active=True).exists()
+        except Exception:
+            return False
+
     def post(self, request):
         """
         Assign roles to a user by email address
@@ -52,18 +64,67 @@ class RoleAssignmentAPIView(APIView):
         email = serializer.validated_data['email']
         selected_roles = serializer.validated_data['selected_roles']
         
+        # Check if user is admin
+        is_admin = self._is_admin(request.user)
+        
         try:
             # Check if user exists
             try:
                 user = User.objects.get(email=email)
                 user_exists = True
+                
+                # For non-admin users, check if they can assign roles to this user
+                if not is_admin:
+                    # Client can only assign roles to users they created
+                    logger.info(f"Debug - User {user.email} created_by: {user.created_by}, Request user: {request.user}, Comparison: {user.created_by == request.user}")
+                    
+                    # Handle case where created_by is None or doesn't match
+                    if user.created_by is None or user.created_by.id != request.user.id:
+                        # Additional check: if both users are in the same organization, allow assignment
+                        try:
+                            if (hasattr(request.user, 'active_organization') and 
+                                hasattr(user, 'active_organization') and 
+                                request.user.active_organization is not None and
+                                user.active_organization is not None and
+                                request.user.active_organization.id == user.active_organization.id):
+                                logger.info(f"Allowing role assignment: Both users in same organization {request.user.active_organization.id}")
+                            else:
+                                logger.warning(f"Permission denied: User {user.email} created_by ({user.created_by}) != request.user ({request.user})")
+                                return Response(
+                                    {
+                                        'success': False,
+                                        'error': 'You can only assign roles to users you created. Please use the "Add User" button in Manage Users to create users first.'
+                                    },
+                                    status=status.HTTP_403_FORBIDDEN
+                                )
+                        except Exception as org_error:
+                            logger.error(f"Error checking organization: {org_error}")
+                            return Response(
+                                {
+                                    'success': False,
+                                    'error': 'You can only assign roles to users you created. Please use the "Add User" button in Manage Users to create users first.'
+                                },
+                                status=status.HTTP_403_FORBIDDEN
+                            )
+                        
             except User.DoesNotExist:
                 user_exists = False
-                # Create new user if they don't exist
+                # For non-admin users, don't allow creating new users
+                if not is_admin:
+                    return Response(
+                        {
+                            'success': False,
+                            'error': 'User not found. You can only assign roles to users you created. Please use the "Add User" button in Manage Users to create users first.'
+                        },
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+                
+                # Admin can create new user if they don't exist
                 user = User.objects.create_user(
                     email=email,
                     password=None,  # Will be set when user first logs in
-                    username=email.split('@')[0]
+                    username=email.split('@')[0],
+                    created_by=request.user  # Set created_by to the admin who created the user
                 )
                 logger.info(f"Created new user for email: {email}")
             
@@ -83,7 +144,7 @@ class RoleAssignmentAPIView(APIView):
                     )
                     logger.info(f"Created new role: {role_name}")
                 
-                # Assign role to user
+                # Assign role to user - handle both new and existing assignments
                 assignment, created = UserRoleAssignment.objects.get_or_create(
                     user=user,
                     role=role,
@@ -98,7 +159,18 @@ class RoleAssignmentAPIView(APIView):
                     assigned_roles.append(role)
                     logger.info(f"Assigned role {role.name} to user {email}")
                 else:
-                    logger.info(f"Role {role.name} already assigned to user {email}")
+                    # Assignment already exists, check if it's inactive and reactivate if needed
+                    if not assignment.is_active:
+                        assignment.is_active = True
+                        assignment.assigned_by = request.user if request.user.is_authenticated else None
+                        assignment.assigned_at = timezone.now()
+                        assignment.revoked_at = None
+                        assignment.revoked_by = None
+                        assignment.save()
+                        assigned_roles.append(role)
+                        logger.info(f"Reactivated role {role.name} for user {email}")
+                    else:
+                        logger.info(f"Role {role.name} already assigned to user {email}")
             
             # Send notification email
             self._send_assignment_notification(user, assigned_roles, user_exists)

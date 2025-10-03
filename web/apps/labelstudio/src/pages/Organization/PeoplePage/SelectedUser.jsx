@@ -169,7 +169,7 @@ export const SelectedUser = ({ user, onClose }) => {
       {/* Tab Content */}
       {activeTab === 'projects' && (
         <Elem name="project-grid">
-          {user.created_projects.slice(0, 4).map((project) => (
+          {(user.created_projects || []).slice(0, 4).map((project) => (
             <Elem key={`project-${project.id}`} name="project-card">
               <Elem name="project-icon">📁</Elem>
               <Elem name="project-title">{project.title}</Elem>

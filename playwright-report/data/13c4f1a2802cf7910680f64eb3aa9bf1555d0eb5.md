@@ -1,0 +1,169 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - img "TOAI Studio" [ref=e6] [cursor=pointer]
+      - list [ref=e14]:
+        - listitem:
+          - generic: Home
+      - button "Light" [ref=e16] [cursor=pointer]:
+        - generic [ref=e18] [cursor=pointer]:
+          - img [ref=e19] [cursor=pointer]
+          - img [ref=e22] [cursor=pointer]
+        - generic [ref=e25] [cursor=pointer]: Light
+      - generic [ref=e27] [cursor=pointer]:
+        - img "DHANESHWARI.TOSSCSS" [ref=e28] [cursor=pointer]
+        - generic [ref=e29] [cursor=pointer]: DH
+    - main [ref=e32]:
+      - generic [ref=e33]:
+        - generic [ref=e34]:
+          - generic [ref=e36]:
+            - heading "Welcome to TOAI Studio" [level=1] [ref=e37]:
+              - text: Welcome to
+              - img "TOAI Studio" [ref=e38]
+            - paragraph [ref=e39]: Let's get you started with your AI journey
+          - generic [ref=e40]:
+            - button "Create Project" [ref=e41] [cursor=pointer]:
+              - generic [ref=e42] [cursor=pointer]:
+                - img [ref=e43] [cursor=pointer]
+                - text: Create Project
+            - button "Invite People" [ref=e45] [cursor=pointer]:
+              - generic [ref=e46] [cursor=pointer]:
+                - img [ref=e47] [cursor=pointer]
+                - text: Invite People
+        - generic [ref=e50]:
+          - generic [ref=e52]:
+            - generic [ref=e53]:
+              - img [ref=e54]
+              - heading "Your Projects" [level=2] [ref=e56]
+            - generic [ref=e57]:
+              - 'link "New Project #33 General AI Model 0 of 0 Tasks (0%) New Project 3/268 Tasks (14%) 0%" [ref=e58] [cursor=pointer]':
+                - /url: /projects/203
+                - generic [ref=e59] [cursor=pointer]:
+                  - generic [ref=e60] [cursor=pointer]:
+                    - 'heading "New Project #33" [level=3] [ref=e61] [cursor=pointer]'
+                    - paragraph [ref=e62] [cursor=pointer]: General AI Model
+                    - paragraph [ref=e63] [cursor=pointer]: 0 of 0 Tasks (0%)
+                    - generic [ref=e64] [cursor=pointer]: New Project
+                    - paragraph [ref=e65] [cursor=pointer]: 3/268 Tasks (14%)
+                  - generic [ref=e67] [cursor=pointer]:
+                    - img [ref=e68] [cursor=pointer]
+                    - generic [ref=e72] [cursor=pointer]: 0%
+              - 'link "New Project #26 General AI Model 0 of 0 Tasks (0%) New Project 3/243 Tasks (17%) 0%" [ref=e73] [cursor=pointer]':
+                - /url: /projects/202
+                - generic [ref=e74] [cursor=pointer]:
+                  - generic [ref=e75] [cursor=pointer]:
+                    - 'heading "New Project #26" [level=3] [ref=e76] [cursor=pointer]'
+                    - paragraph [ref=e77] [cursor=pointer]: General AI Model
+                    - paragraph [ref=e78] [cursor=pointer]: 0 of 0 Tasks (0%)
+                    - generic [ref=e79] [cursor=pointer]: New Project
+                    - paragraph [ref=e80] [cursor=pointer]: 3/243 Tasks (17%)
+                  - generic [ref=e82] [cursor=pointer]:
+                    - img [ref=e83] [cursor=pointer]
+                    - generic [ref=e87] [cursor=pointer]: 0%
+              - 'link "New Project #25 General AI Model 0 of 0 Tasks (0%) New Project 5/255 Tasks (12%) 0%" [ref=e88] [cursor=pointer]':
+                - /url: /projects/201
+                - generic [ref=e89] [cursor=pointer]:
+                  - generic [ref=e90] [cursor=pointer]:
+                    - 'heading "New Project #25" [level=3] [ref=e91] [cursor=pointer]'
+                    - paragraph [ref=e92] [cursor=pointer]: General AI Model
+                    - paragraph [ref=e93] [cursor=pointer]: 0 of 0 Tasks (0%)
+                    - generic [ref=e94] [cursor=pointer]: New Project
+                    - paragraph [ref=e95] [cursor=pointer]: 5/255 Tasks (12%)
+                  - generic [ref=e97] [cursor=pointer]:
+                    - img [ref=e98] [cursor=pointer]
+                    - generic [ref=e102] [cursor=pointer]: 0%
+              - 'link "New Project #24 General AI Model 0 of 0 Tasks (0%) New Project 5/224 Tasks (16%) 0%" [ref=e103] [cursor=pointer]':
+                - /url: /projects/200
+                - generic [ref=e104] [cursor=pointer]:
+                  - generic [ref=e105] [cursor=pointer]:
+                    - 'heading "New Project #24" [level=3] [ref=e106] [cursor=pointer]'
+                    - paragraph [ref=e107] [cursor=pointer]: General AI Model
+                    - paragraph [ref=e108] [cursor=pointer]: 0 of 0 Tasks (0%)
+                    - generic [ref=e109] [cursor=pointer]: New Project
+                    - paragraph [ref=e110] [cursor=pointer]: 5/224 Tasks (16%)
+                  - generic [ref=e112] [cursor=pointer]:
+                    - img [ref=e113] [cursor=pointer]
+                    - generic [ref=e117] [cursor=pointer]: 0%
+          - generic [ref=e119]:
+            - generic [ref=e120]:
+              - heading "Quick Actions" [level=3] [ref=e121]
+              - generic [ref=e122]:
+                - button "🎯 Target" [ref=e123] [cursor=pointer]:
+                  - generic [ref=e125] [cursor=pointer]: 🎯
+                  - generic [ref=e126] [cursor=pointer]: Target
+                - button "👤 People" [ref=e127] [cursor=pointer]:
+                  - generic [ref=e129] [cursor=pointer]: 👤
+                  - generic [ref=e130] [cursor=pointer]: People
+                - button "💻 Code" [ref=e131] [cursor=pointer]:
+                  - generic [ref=e133] [cursor=pointer]: 💻
+                  - generic [ref=e134] [cursor=pointer]: Code
+            - generic [ref=e135]:
+              - heading "Quick Feed" [level=3] [ref=e136]
+              - generic [ref=e138]:
+                - generic [ref=e140]: 📝
+                - generic [ref=e141]:
+                  - heading "Create New Update" [level=4] [ref=e142]
+                  - paragraph [ref=e143]: "Platform Building: New AI Models Available"
+                  - button "Tutorial" [ref=e144] [cursor=pointer]
+            - generic [ref=e145]:
+              - heading "News Feed" [level=3] [ref=e146]
+              - generic [ref=e147]:
+                - generic [ref=e149]:
+                  - generic [ref=e151]: 🖼️
+                  - generic [ref=e152]:
+                    - 'heading "Image Building: New AI" [level=4] [ref=e153]'
+                    - paragraph [ref=e154]: Heuri Four AI Aide ged Available
+                - generic [ref=e156]:
+                  - generic [ref=e158]: 🎯
+                  - generic [ref=e159]:
+                    - heading "Object Project Filter" [level=4] [ref=e160]
+                    - paragraph [ref=e161]: 2 4 118 Tasks Complete!
+                    - button "Tutorial" [ref=e162] [cursor=pointer]
+          - generic [ref=e164]:
+            - generic [ref=e165]:
+              - heading "Resource Hub" [level=3] [ref=e166]
+              - generic [ref=e167]:
+                - button "📚 Documentation" [ref=e168] [cursor=pointer]:
+                  - generic [ref=e169] [cursor=pointer]: 📚
+                  - generic [ref=e170] [cursor=pointer]: Documentation
+                - button "💾 Code Saving" [ref=e171] [cursor=pointer]:
+                  - generic [ref=e172] [cursor=pointer]: 💾
+                  - generic [ref=e173] [cursor=pointer]: Code Saving
+                - button "🔧 A Features" [ref=e174] [cursor=pointer]:
+                  - generic [ref=e175] [cursor=pointer]: 🔧
+                  - generic [ref=e176] [cursor=pointer]: A Features
+                - button "🔌 API Access" [ref=e177] [cursor=pointer]:
+                  - generic [ref=e178] [cursor=pointer]: 🔌
+                  - generic [ref=e179] [cursor=pointer]: API Access
+                - button "🆘 Support" [ref=e180] [cursor=pointer]:
+                  - generic [ref=e181] [cursor=pointer]: 🆘
+                  - generic [ref=e182] [cursor=pointer]: Support
+            - generic [ref=e183]:
+              - heading "Support" [level=3] [ref=e184]
+              - generic [ref=e185]:
+                - generic [ref=e186]:
+                  - generic [ref=e187]: "11"
+                  - generic [ref=e188]: "5"
+                  - generic [ref=e189]: "28"
+                  - generic [ref=e190]: "10"
+                - generic [ref=e197]: 20%
+            - generic [ref=e198]:
+              - heading "Task Overview" [level=3] [ref=e199]
+              - paragraph [ref=e200]: 7 Completed Tasks (3)
+              - generic [ref=e201]:
+                - generic [ref=e204]:
+                  - generic [ref=e205]: "3"
+                  - generic [ref=e206]: "28"
+                  - generic [ref=e207]: 18%
+                  - generic [ref=e208]: 17%
+                  - generic [ref=e209]: "26"
+                - generic [ref=e217]: 30%
+              - button "Relbirtastice →" [ref=e218] [cursor=pointer]:
+                - text: Relbirtastice
+                - generic [ref=e219] [cursor=pointer]: →
+  - generic:
+    - region "Notifications (F8)"
+```

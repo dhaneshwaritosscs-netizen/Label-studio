@@ -72,10 +72,38 @@ class ExportFormatsListAPI(generics.RetrieveAPIView):
     permission_required = all_permissions.projects_view
 
     def get_queryset(self):
-        return Project.objects.filter(
-            organization=self.request.user.active_organization,
-            created_by=self.request.user
-        )
+        # Check if user is admin
+        is_admin = self._is_user_admin()
+        
+        if is_admin:
+            # Admin can access all projects in organization
+            return Project.objects.filter(
+                organization=self.request.user.active_organization
+            )
+        else:
+            # Client and user roles can access projects they have access to
+            # Allow access to all projects in organization for assigned projects
+            return Project.objects.filter(
+                organization=self.request.user.active_organization
+            )
+    
+    def _is_user_admin(self):
+        """Check if user is admin (staff or has admin role)"""
+        # Check Django staff status
+        if self.request.user.is_staff:
+            return True
+            
+        # Check custom role system
+        try:
+            from users.role_models import UserRoleAssignment
+            return UserRoleAssignment.objects.filter(
+                user=self.request.user,
+                role__name__in=['admin', 'administrator'],
+                is_active=True
+            ).exists()
+        except ImportError:
+            # Fallback to staff check if role system not available
+            return False
 
     def get(self, request, *args, **kwargs):
         project = self.get_object()
@@ -163,13 +191,41 @@ class ExportFormatsListAPI(generics.RetrieveAPIView):
     ),
 )
 class ExportAPI(generics.RetrieveAPIView):
-    permission_required = all_permissions.projects_change
+    permission_required = all_permissions.projects_view
 
     def get_queryset(self):
-        return Project.objects.filter(
-            organization=self.request.user.active_organization,
-            created_by=self.request.user
-        )
+        # Check if user is admin
+        is_admin = self._is_user_admin()
+        
+        if is_admin:
+            # Admin can access all projects in organization
+            return Project.objects.filter(
+                organization=self.request.user.active_organization
+            )
+        else:
+            # Client and user roles can access projects they have access to
+            # Allow access to all projects in organization for assigned projects
+            return Project.objects.filter(
+                organization=self.request.user.active_organization
+            )
+    
+    def _is_user_admin(self):
+        """Check if user is admin (staff or has admin role)"""
+        # Check Django staff status
+        if self.request.user.is_staff:
+            return True
+            
+        # Check custom role system
+        try:
+            from users.role_models import UserRoleAssignment
+            return UserRoleAssignment.objects.filter(
+                user=self.request.user,
+                role__name__in=['admin', 'administrator'],
+                is_active=True
+            ).exists()
+        except ImportError:
+            # Fallback to staff check if role system not available
+            return False
 
     def get_task_queryset(self, queryset):
         return queryset.select_related('project').prefetch_related('annotations', 'predictions')
@@ -182,7 +238,15 @@ class ExportAPI(generics.RetrieveAPIView):
         export_type = (
             query_serializer.validated_data.get('exportType') or query_serializer.validated_data['export_type']
         )
-        only_finished = not query_serializer.validated_data['download_all_tasks']
+        
+        # For client and user roles, default to downloading all tasks
+        is_admin = self._is_user_admin()
+        download_all_tasks = query_serializer.validated_data['download_all_tasks']
+        if not is_admin and not download_all_tasks:
+            # For non-admin users, default to downloading all tasks
+            download_all_tasks = True
+            
+        only_finished = not download_all_tasks
         download_resources = query_serializer.validated_data['download_resources']
         interpolate_key_frames = query_serializer.validated_data['interpolate_key_frames']
 
@@ -230,14 +294,42 @@ class ExportAPI(generics.RetrieveAPIView):
     ),
 )
 class ProjectExportFiles(generics.RetrieveAPIView):
-    permission_required = all_permissions.projects_change
+    permission_required = all_permissions.projects_view
     swagger_schema = None  # hide export files endpoint from swagger
 
     def get_queryset(self):
-        return Project.objects.filter(
-            organization=self.request.user.active_organization,
-            created_by=self.request.user
-        )
+        # Check if user is admin
+        is_admin = self._is_user_admin()
+        
+        if is_admin:
+            # Admin can access all projects in organization
+            return Project.objects.filter(
+                organization=self.request.user.active_organization
+            )
+        else:
+            # Client and user roles can access projects they have access to
+            # Allow access to all projects in organization for assigned projects
+            return Project.objects.filter(
+                organization=self.request.user.active_organization
+            )
+    
+    def _is_user_admin(self):
+        """Check if user is admin (staff or has admin role)"""
+        # Check Django staff status
+        if self.request.user.is_staff:
+            return True
+            
+        # Check custom role system
+        try:
+            from users.role_models import UserRoleAssignment
+            return UserRoleAssignment.objects.filter(
+                user=self.request.user,
+                role__name__in=['admin', 'administrator'],
+                is_active=True
+            ).exists()
+        except ImportError:
+            # Fallback to staff check if role system not available
+            return False
 
     def get(self, request, *args, **kwargs):
         # project permission check
@@ -259,7 +351,7 @@ class ProjectExportFilesAuthCheck(APIView):
 
     swagger_schema = None
     http_method_names = ['get']
-    permission_required = all_permissions.projects_change
+    permission_required = all_permissions.projects_view
 
     def get(self, request, *args, **kwargs):
         """Get export files list"""
@@ -324,7 +416,7 @@ class ExportListAPI(generics.ListCreateAPIView):
     queryset = Export.objects.all().order_by('-created_at')
     project_model = Project
     serializer_class = ExportSerializer
-    permission_required = all_permissions.projects_change
+    permission_required = all_permissions.projects_view
 
     def get_serializer_class(self):
         if self.request.method == 'GET':
@@ -430,7 +522,7 @@ class ExportDetailAPI(generics.RetrieveDestroyAPIView):
     project_model = Project
     serializer_class = ExportSerializer
     lookup_url_kwarg = 'export_pk'
-    permission_required = all_permissions.projects_change
+    permission_required = all_permissions.projects_view
 
     def delete(self, *args, **kwargs):
         if flag_set('ff_back_dev_4664_remove_storage_file_on_export_delete_29032023_short'):
@@ -508,7 +600,7 @@ class ExportDownloadAPI(generics.RetrieveAPIView):
     project_model = Project
     serializer_class = None
     lookup_url_kwarg = 'export_pk'
-    permission_required = all_permissions.projects_change
+    permission_required = all_permissions.projects_view
 
     def _get_project(self):
         project_pk = self.kwargs.get('pk')
@@ -652,7 +744,7 @@ def set_convert_background_failure(job, connection, type, value, traceback_obj):
 class ExportConvertAPI(generics.RetrieveAPIView):
     queryset = Export.objects.all()
     lookup_url_kwarg = 'export_pk'
-    permission_required = all_permissions.projects_change
+    permission_required = all_permissions.projects_view
 
     def post(self, request, *args, **kwargs):
         snapshot = self.get_object()

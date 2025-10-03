@@ -3,6 +3,7 @@ import { ApiContext } from "../../providers/ApiProvider";
 import { useCurrentUser } from "../../providers/CurrentUser";
 import { useUserRoles } from "../../hooks/useUserRoles";
 import { Block, Elem } from "../../utils/bem";
+import { TopNavigationBar } from "../../components/TopNavigationBar";
 import "./ProjectSettings.scss";
 
 export const ProjectSettings = () => {
@@ -14,15 +15,41 @@ export const ProjectSettings = () => {
   const [error, setError] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
   const [showProjectDetails, setShowProjectDetails] = useState(false);
+  const [userProjectAssignments, setUserProjectAssignments] = useState({});
 
   // Determine user role
   const isAdmin = hasRole('admin');
   const isClient = hasRole('client') || (!isAdmin && user); // Default to client if not admin
 
+  // Load user project assignments from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('userProjectAssignments');
+      console.log("ProjectSettings - Raw localStorage data:", saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        console.log("ProjectSettings - Parsed localStorage data:", parsed);
+        console.log("ProjectSettings - All user IDs in localStorage:", Object.keys(parsed));
+        setUserProjectAssignments(parsed);
+      } else {
+        console.log("ProjectSettings - No userProjectAssignments found in localStorage");
+      }
+    } catch (error) {
+      console.error('Error loading user project assignments:', error);
+    }
+  }, []);
+
   // Fetch projects based on user role
   useEffect(() => {
     const fetchProjects = async () => {
+      console.log("ProjectSettings - fetchProjects called");
+      console.log("ProjectSettings - user:", user);
+      console.log("ProjectSettings - isAdmin:", isAdmin);
+      console.log("ProjectSettings - isClient:", isClient);
+      console.log("ProjectSettings - userProjectAssignments:", userProjectAssignments);
+      
       if (!user) {
+        console.log("ProjectSettings - No user, setting loading to false");
         setLoading(false);
         return;
       }
@@ -32,25 +59,52 @@ export const ProjectSettings = () => {
         setError(null);
         
         // Fetch projects based on user role
+        const requestParams = {
+          show_all: true, // Always fetch all projects first
+          page_size: 1000,
+          include: "id,title,description,created_by,created_at,is_published,task_number,total_annotations_number,finished_task_number,color"
+        };
+        
+        console.log("ProjectSettings - Request params:", requestParams);
+        
         const projectsResponse = await api.callApi("projects", {
-          params: {
-            show_all: isAdmin, // Admin sees all projects, client sees only assigned
-            ...(isAdmin && user?.id ? { created_by: user.id } : {}), // Only add created_by if user.id exists
-            page_size: 1000,
-            include: "id,title,description,created_by,created_at,is_published,task_number,total_annotations_number,finished_task_number,color"
-          }
+          params: requestParams
         });
+        
+        console.log("ProjectSettings - API response:", projectsResponse);
 
         if (projectsResponse.results) {
           let filteredProjects = projectsResponse.results;
 
-          // For admin users, ensure they only see projects they created
           if (isAdmin) {
+            // For admin users, ensure they only see projects they created
             filteredProjects = projectsResponse.results.filter(project => 
               project.created_by?.id === user.id
             );
+          } else if (isClient) {
+            // For client users, show assigned projects
+            const currentUserAssignments = userProjectAssignments[user.id] || [];
+            console.log("ProjectSettings - Client user ID:", user.id);
+            console.log("ProjectSettings - User email:", user.email);
+            console.log("ProjectSettings - User assignments:", currentUserAssignments);
+            console.log("ProjectSettings - All userProjectAssignments:", userProjectAssignments);
+            console.log("ProjectSettings - All projects:", filteredProjects.length);
+            
+            // Debug: Check localStorage directly
+            const localStorageAssignments = JSON.parse(localStorage.getItem('userProjectAssignments') || '{}');
+            console.log("ProjectSettings - localStorage assignments:", localStorageAssignments);
+            console.log("ProjectSettings - localStorage assignments for user:", localStorageAssignments[user.id]);
+            
+            if (currentUserAssignments.length > 0) {
+              filteredProjects = filteredProjects.filter(project => 
+                currentUserAssignments.includes(project.id)
+              );
+              console.log("ProjectSettings - Filtered projects:", filteredProjects.length);
+            } else {
+              console.log("ProjectSettings - No assignments found, showing empty list");
+              filteredProjects = [];
+            }
           }
-          // For client users, they will only see assigned projects (handled by backend filtering)
 
           setProjects(filteredProjects);
         } else {
@@ -66,7 +120,85 @@ export const ProjectSettings = () => {
     };
 
     fetchProjects();
-  }, [user, api, isAdmin, isClient]);
+  }, [user, api, isAdmin, isClient, userProjectAssignments]);
+
+  // Debug function to check project assignments (can be called from browser console)
+  window.debugProjectSettings = () => {
+    const assignments = JSON.parse(localStorage.getItem('userProjectAssignments') || '{}');
+    const clientAssignments = JSON.parse(localStorage.getItem('clientUserAssignments') || '{}');
+    console.log('ProjectSettings Debug:');
+    console.log('- Current user:', user);
+    console.log('- User ID:', user?.id);
+    console.log('- User email:', user?.email);
+    console.log('- userProjectAssignments state:', userProjectAssignments);
+    console.log('- localStorage userProjectAssignments:', assignments);
+    console.log('- localStorage clientUserAssignments:', clientAssignments);
+    console.log('- User assignments from state:', userProjectAssignments[user?.id] || []);
+    console.log('- User assignments from localStorage:', assignments[user?.id] || []);
+    console.log('- Available projects:', projects.length);
+    console.log('- Filtered projects:', projects);
+    return { 
+      user, 
+      assignments, 
+      clientAssignments, 
+      userProjectAssignments, 
+      projects 
+    };
+  };
+
+  // Function to manually refresh userProjectAssignments from localStorage
+  window.refreshProjectAssignments = () => {
+    try {
+      const saved = localStorage.getItem('userProjectAssignments');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setUserProjectAssignments(parsed);
+        console.log('Refreshed userProjectAssignments from localStorage:', parsed);
+        return parsed;
+      } else {
+        console.log('No userProjectAssignments found in localStorage');
+        return {};
+      }
+    } catch (error) {
+      console.error('Error refreshing userProjectAssignments:', error);
+      return {};
+    }
+  };
+
+  // Function to check specific user assignments
+  window.checkUserAssignments = (userEmail) => {
+    const assignments = JSON.parse(localStorage.getItem('userProjectAssignments') || '{}');
+    console.log('Checking assignments for user:', userEmail);
+    console.log('All assignments:', assignments);
+    
+    // Find user by email
+    const userEntries = Object.entries(assignments);
+    console.log('All user entries:', userEntries);
+    
+    // This is a simplified check - in reality we'd need to match by email
+    // since we only have user IDs in localStorage
+    return assignments;
+  };
+
+  // Function to manually assign projects to current user (for testing)
+  window.assignProjectsToCurrentUser = (projectIds) => {
+    if (!user?.id) {
+      console.error('No current user found');
+      return;
+    }
+    
+    try {
+      const assignments = JSON.parse(localStorage.getItem('userProjectAssignments') || '{}');
+      assignments[user.id] = projectIds;
+      localStorage.setItem('userProjectAssignments', JSON.stringify(assignments));
+      setUserProjectAssignments(assignments);
+      console.log(`Assigned projects ${projectIds} to user ${user.id} (${user.email})`);
+      return assignments;
+    } catch (error) {
+      console.error('Error assigning projects:', error);
+      return {};
+    }
+  };
 
   const handleProjectClick = (project) => {
     setSelectedProject(project);
@@ -147,6 +279,9 @@ export const ProjectSettings = () => {
         minHeight: "100vh",
         fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
       }}>
+        {/* Top Navigation Bar */}
+        <TopNavigationBar />
+        
         {/* Header */}
         <div style={{
           display: "flex",
@@ -170,7 +305,7 @@ export const ProjectSettings = () => {
               color: "#6b7280",
               margin: "0"
             }}>
-              Total number of projects across all users.
+              {isAdmin ? "Total number of projects across all client." : "Projects assigned to you."}
             </p>
           </div>
         </div>

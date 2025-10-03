@@ -3,6 +3,7 @@ import { Block, Elem } from "../../utils/bem";
 import { ApiContext } from "../../providers/ApiProvider";
 import { useCurrentUser } from "../../providers/CurrentUser";
 import { useUserRoles } from "../../hooks/useUserRoles";
+import { TopNavigationBar } from "../../components/TopNavigationBar";
 import "./ProjectsOverview.scss";
 
 export const ProjectsOverview = () => {
@@ -60,11 +61,26 @@ export const ProjectsOverview = () => {
             !hiddenProjects.includes(project.id)
           );
 
+          // Get user's assigned projects from localStorage
+          const userProjectAssignments = JSON.parse(localStorage.getItem('userProjectAssignments') || '{}');
+          const userAssignments = userProjectAssignments[user.id] || [];
+
+          // For client users, include both created projects and assigned projects
+          let filteredProjects = visibleProjects;
+          if (isClient) {
+            filteredProjects = visibleProjects.filter(project => 
+              project.created_by?.id === user.id || 
+              userAssignments.includes(project.id)
+            );
+            console.log(`Client ${user.email}: Found ${filteredProjects.length} projects (created + assigned)`);
+            console.log(`User assignments:`, userAssignments);
+          }
+
           // Get manual status changes from localStorage
           const manualStatusChanges = JSON.parse(localStorage.getItem('projectManualStatus') || '{}');
 
           // Process projects and categorize them
-          const processedProjects = visibleProjects.map(project => {
+          const processedProjects = filteredProjects.map(project => {
             const totalTasks = project.task_number || 0;
             const finishedTasks = project.finished_task_number || 0;
             const totalAnnotations = project.total_annotations_number || 0;
@@ -245,12 +261,18 @@ export const ProjectsOverview = () => {
 
       // Role-based project visibility filtering
       if (isClient) {
-        // Client users should only see client projects (not admin projects)
+        // Client users should see their created projects AND assigned projects
         const projectCreatorEmail = project.created_by?.email;
         const isProjectCreatedByAdmin = projectCreatorEmail === 'dhaneshwari.tosscss@gmail.com';
+        const isProjectCreatedByUser = project.created_by?.id === user?.id;
         
-        // If project is created by admin, hide it from client users
-        if (isProjectCreatedByAdmin) {
+        // Get user's assigned projects from localStorage
+        const userProjectAssignments = JSON.parse(localStorage.getItem('userProjectAssignments') || '{}');
+        const userAssignments = userProjectAssignments[user?.id] || [];
+        const isProjectAssignedToUser = userAssignments.includes(project.id);
+        
+        // Show project if: created by user OR assigned to user
+        if (!isProjectCreatedByUser && !isProjectAssignedToUser) {
           return false;
         }
       }
@@ -265,6 +287,9 @@ export const ProjectsOverview = () => {
           if (project.statusText !== 'annotated') return false;
         } else if (activeTab === 'archived') {
           if (project.statusText !== 'completed') return false;
+        } else if (activeTab === 'all') {
+          // Show all projects for client users
+          // No additional filtering needed
         }
       } else {
         // For admin users, use existing category-based filtering
@@ -280,7 +305,29 @@ export const ProjectsOverview = () => {
       // Filter by search term
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
-        const managerRole = project.created_by?.email === 'dhaneshwari.tosscss@gmail.com' ? 'admin' : 'client';
+        
+        // Get manager value using the same logic as display
+        const userProjectAssignments = JSON.parse(localStorage.getItem('userProjectAssignments') || '{}');
+        const clientUserAssignments = JSON.parse(localStorage.getItem('clientUserAssignments') || '{}');
+        
+        const isAssignedToUser = Object.values(userProjectAssignments).some(projectIds => 
+          projectIds.includes(project.id)
+        );
+        
+        const isAssignedToClient = Object.keys(clientUserAssignments).some(clientId => 
+          clientUserAssignments[clientId] && 
+          Object.keys(clientUserAssignments[clientId]).some(projectId => 
+            parseInt(projectId) === project.id
+          )
+        );
+        
+        let managerRole = '-';
+        if (isAssignedToClient) {
+          managerRole = 'client';
+        } else if (isAssignedToUser) {
+          managerRole = 'user';
+        }
+        
         return project.title.toLowerCase().includes(searchLower) ||
                project.description.toLowerCase().includes(searchLower) ||
                managerRole.includes(searchLower);
@@ -299,8 +346,32 @@ export const ProjectsOverview = () => {
         aVal = a.id;
         bVal = b.id;
       } else if (sortBy === 'manager') {
-        aVal = a.created_by?.email === 'dhaneshwari.tosscss@gmail.com' ? 'admin' : 'client';
-        bVal = b.created_by?.email === 'dhaneshwari.tosscss@gmail.com' ? 'admin' : 'client';
+        // Get manager value using the same logic as display
+        const getUserProjectAssignments = () => JSON.parse(localStorage.getItem('userProjectAssignments') || '{}');
+        const getClientUserAssignments = () => JSON.parse(localStorage.getItem('clientUserAssignments') || '{}');
+        
+        const getManagerValue = (project) => {
+          const userProjectAssignments = getUserProjectAssignments();
+          const clientUserAssignments = getClientUserAssignments();
+          
+          const isAssignedToUser = Object.values(userProjectAssignments).some(projectIds => 
+            projectIds.includes(project.id)
+          );
+          
+          const isAssignedToClient = Object.keys(clientUserAssignments).some(clientId => 
+            clientUserAssignments[clientId] && 
+            Object.keys(clientUserAssignments[clientId]).some(projectId => 
+              parseInt(projectId) === project.id
+            )
+          );
+          
+          if (isAssignedToClient) return 'client';
+          if (isAssignedToUser) return 'user';
+          return 'unassigned';
+        };
+        
+        aVal = getManagerValue(a);
+        bVal = getManagerValue(b);
       } else {
         aVal = a.title.toLowerCase();
         bVal = b.title.toLowerCase();
@@ -333,14 +404,58 @@ export const ProjectsOverview = () => {
     window.history.back();
   };
 
-  const handleImport = () => {
-    console.log('Import functionality');
-    // TODO: Implement import functionality
-  };
+  const handleExport = () => {
+    try {
+      // Prepare CSV data
+      const csvHeaders = [
+        'ID',
+        'Project Name', 
+        'Project Type',
+        'Manager',
+        'Status',
+        'Created By',
+        'Created At',
+        'Task Number',
+        'Total Annotations',
+        'Finished Tasks',
+        'Is Published'
+      ];
 
-  const handleClone = () => {
-    console.log('Clone functionality');
-    // TODO: Implement clone functionality
+      const csvData = projects.map(project => [
+        project.id || '',
+        project.title || '',
+        'Annotation', // Default project type
+        'Admin', // Default manager
+        project.is_published ? 'Active' : 'Inactive',
+        project.created_by?.email || '',
+        project.created_at ? new Date(project.created_at).toLocaleDateString() : '',
+        project.task_number || 0,
+        project.total_annotations_number || 0,
+        project.finished_task_number || 0,
+        project.is_published ? 'Yes' : 'No'
+      ]);
+
+      // Create CSV content
+      const csvContent = [
+        csvHeaders.join(','),
+        ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `projects_export_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      console.log('Projects exported successfully');
+    } catch (error) {
+      console.error('Error exporting projects:', error);
+    }
   };
 
   const handleSearch = (e) => {
@@ -361,35 +476,82 @@ export const ProjectsOverview = () => {
       setSelectedProjectTitle(projectTitle);
       setShowUserModal(true);
       
-      // Fetch users who created this specific project
-      const usersResponse = await api.callApi("projects", {
-        params: {
-          created_by: projectId, // This will get users who created this project
-          page_size: 100
-        }
-      });
-
-      if (usersResponse.results && usersResponse.results.length > 0) {
-        // Get unique users who created this project
-        const uniqueUsers = usersResponse.results.map(project => ({
-          id: project.created_by?.id,
-          email: project.created_by?.email,
-          first_name: project.created_by?.first_name,
-          last_name: project.created_by?.last_name,
-          created_at: project.created_at
-        }));
-
-        // Remove duplicates based on user ID
-        const uniqueUsersMap = new Map();
-        uniqueUsers.forEach(user => {
-          if (user.id && !uniqueUsersMap.has(user.id)) {
-            uniqueUsersMap.set(user.id, user);
+      // Get all users assigned to this project from localStorage
+      const userProjectAssignments = JSON.parse(localStorage.getItem('userProjectAssignments') || '{}');
+      const clientUserAssignments = JSON.parse(localStorage.getItem('clientUserAssignments') || '{}');
+      
+      // Find all users assigned to this project
+      const assignedUsers = [];
+      
+      if (isAdmin) {
+        // Admin sees all users assigned to this project
+        // Check regular user assignments
+        Object.keys(userProjectAssignments).forEach(userId => {
+          const userProjects = userProjectAssignments[userId] || [];
+          if (userProjects.includes(projectId)) {
+            assignedUsers.push({ userId: parseInt(userId), assignmentType: 'user' });
           }
         });
-
-        setSelectedProjectUsers(Array.from(uniqueUsersMap.values()));
+        
+        // Check client user assignments
+        Object.keys(clientUserAssignments).forEach(clientId => {
+          const clientProjects = clientUserAssignments[clientId] || {};
+          Object.keys(clientProjects).forEach(projectIdKey => {
+            if (parseInt(projectIdKey) === projectId) {
+              const clientProjectUsers = clientProjects[projectIdKey] || [];
+              clientProjectUsers.forEach(userId => {
+                assignedUsers.push({ userId: parseInt(userId), assignmentType: 'client' });
+              });
+            }
+          });
+        });
       } else {
-        // If no specific users found, show the project creator
+        // Client sees only their own users assigned to this project
+        const currentClientId = user?.id;
+        if (currentClientId && clientUserAssignments[currentClientId]) {
+          const clientProjects = clientUserAssignments[currentClientId] || {};
+          const projectUsers = clientProjects[projectId] || [];
+          projectUsers.forEach(userId => {
+            assignedUsers.push({ userId: parseInt(userId), assignmentType: 'client' });
+          });
+        }
+      }
+      
+      // Fetch user details for all assigned users
+      if (assignedUsers.length > 0) {
+        try {
+          const usersResponse = await api.callApi("memberships", {
+            params: {
+              pk: 1,
+              contributed_to_projects: 1,
+              page_size: 1000,
+              include: "id,email,first_name,last_name,date_joined,last_activity"
+            }
+          });
+          
+          if (usersResponse.results) {
+            const assignedUserIds = [...new Set(assignedUsers.map(u => u.userId))];
+            const projectUsers = usersResponse.results
+              .filter(({ user }) => assignedUserIds.includes(user.id))
+              .map(({ user }) => ({
+                id: user.id,
+                email: user.email,
+                first_name: user.first_name,
+                last_name: user.last_name,
+                date_joined: user.date_joined,
+                last_activity: user.last_activity
+              }));
+            
+            setSelectedProjectUsers(projectUsers);
+          } else {
+            setSelectedProjectUsers([]);
+          }
+        } catch (error) {
+          console.error("Error fetching user details:", error);
+          setSelectedProjectUsers([]);
+        }
+      } else {
+        // If no assigned users found, show the project creator
         const project = projects.find(p => p.id === projectId);
         if (project && project.created_by) {
           setSelectedProjectUsers([{
@@ -680,11 +842,15 @@ export const ProjectsOverview = () => {
     return projects.filter(project => {
       // Apply role-based visibility filtering
       if (isClient) {
-        const projectCreatorEmail = project.created_by?.email;
-        const isProjectCreatedByAdmin = projectCreatorEmail === 'dhaneshwari.tosscss@gmail.com';
-        if (isProjectCreatedByAdmin) {
-          return false;
-        }
+        const isProjectCreatedByUser = project.created_by?.id === user?.id;
+        
+        // Get user's assigned projects from localStorage
+        const userProjectAssignments = JSON.parse(localStorage.getItem('userProjectAssignments') || '{}');
+        const userAssignments = userProjectAssignments[user?.id] || [];
+        const isProjectAssignedToUser = userAssignments.includes(project.id);
+        
+        // Show project if: created by user OR assigned to user
+        return isProjectCreatedByUser || isProjectAssignedToUser;
       }
       return true;
     });
@@ -738,6 +904,9 @@ export const ProjectsOverview = () => {
         minHeight: "100vh",
         fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
       }}>
+        {/* Top Navigation Bar */}
+        <TopNavigationBar />
+
         {/* Header */}
         <div style={{
           display: "flex",
@@ -764,28 +933,6 @@ export const ProjectsOverview = () => {
               Complete list of all projects across the organization
             </p>
           </div>
-          <button
-            onClick={handleBackToDashboard}
-            style={{
-              padding: "12px 24px",
-              backgroundColor: "#6366f1",
-              color: "white",
-              border: "none",
-              borderRadius: "8px",
-              fontSize: "14px",
-              fontWeight: "600",
-              cursor: "pointer",
-              transition: "all 0.2s ease"
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = "#4f46e5";
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = "#6366f1";
-            }}
-          >
-            ← Back to Dashboard
-          </button>
         </div>
 
         {/* Tabs */}
@@ -795,6 +942,28 @@ export const ProjectsOverview = () => {
           marginBottom: "10px",
           borderBottom: "1px solid #e5e7eb"
         }}>
+          {isClient && (
+            <button
+              onClick={() => setActiveTab('all')}
+              style={{
+                padding: "12px 24px",
+                border: "none",
+                background: "transparent",
+                borderBottom: activeTab === 'all' ? "2px solid #1a1a1a" : "2px solid transparent",
+                color: activeTab === 'all' ? "#1a1a1a" : "#6b7280",
+                fontSize: "16px",
+                fontWeight: "600",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                transition: "all 0.2s ease"
+              }}
+            >
+              <span>📋</span>
+              All Projects ({visibleProjects.length})
+            </button>
+          )}
           <button
             onClick={() => setActiveTab('active')}
             style={{
@@ -870,7 +1039,7 @@ export const ProjectsOverview = () => {
             gap: "12px"
           }}>
             <button
-              onClick={handleImport}
+              onClick={handleExport}
               style={{
                 padding: "8px 16px",
                 backgroundColor: "transparent",
@@ -894,36 +1063,8 @@ export const ProjectsOverview = () => {
                 e.target.style.color = "#8b5cf6";
               }}
             >
-              <span>📤</span>
-              IMPORT
-            </button>
-            <button
-              onClick={handleClone}
-              style={{
-                padding: "8px 16px",
-                backgroundColor: "transparent",
-                color: "#8b5cf6",
-                border: "1px solid #8b5cf6",
-                borderRadius: "6px",
-                fontSize: "14px",
-                fontWeight: "600",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                transition: "all 0.2s ease"
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.backgroundColor = "#8b5cf6";
-                e.target.style.color = "white";
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.backgroundColor = "transparent";
-                e.target.style.color = "#8b5cf6";
-              }}
-            >
-              <span>📋</span>
-              CLONE
+              <span>📥</span>
+              EXPORT
             </button>
           </div>
           
@@ -984,7 +1125,7 @@ export const ProjectsOverview = () => {
           {/* Table Header */}
           <div style={{
             display: "grid",
-            gridTemplateColumns: "80px 1fr 120px 120px 120px 120px 80px",
+            gridTemplateColumns: "80px 1fr 120px 120px 120px 80px",
             gap: "16px",
             padding: "16px 20px",
             backgroundColor: "#f9fafb",
@@ -1018,7 +1159,6 @@ export const ProjectsOverview = () => {
               )}
             </div>
             <div>Manage</div>
-            <div>Reports</div>
             <div>{isClient ? 'Status' : 'Actions'}</div>
           </div>
 
@@ -1032,7 +1172,7 @@ export const ProjectsOverview = () => {
                 key={project.id}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "80px 1fr 120px 120px 120px 120px 80px",
+                  gridTemplateColumns: "80px 1fr 120px 120px 120px 80px",
                   gap: "16px",
                   padding: "16px 20px",
                   borderBottom: index < filteredProjects.length - 1 ? "1px solid #f3f4f6" : "none",
@@ -1118,7 +1258,32 @@ export const ProjectsOverview = () => {
                   color: "#6b7280"
                 }}>
                   {/* <span>👤</span> */}
-                  {project.created_by?.email === 'dhaneshwari.tosscss@gmail.com' ? 'Admin' : 'Client'}
+                  {(() => {
+                    // Check if project is assigned to any client or user
+                    const userProjectAssignments = JSON.parse(localStorage.getItem('userProjectAssignments') || '{}');
+                    const clientUserAssignments = JSON.parse(localStorage.getItem('clientUserAssignments') || '{}');
+                    
+                    // Check if project is assigned to any user
+                    const isAssignedToUser = Object.values(userProjectAssignments).some(projectIds => 
+                      projectIds.includes(project.id)
+                    );
+                    
+                    // Check if project is assigned to any client
+                    const isAssignedToClient = Object.keys(clientUserAssignments).some(clientId => 
+                      clientUserAssignments[clientId] && 
+                      Object.keys(clientUserAssignments[clientId]).some(projectId => 
+                        parseInt(projectId) === project.id
+                      )
+                    );
+                    
+                    if (isAssignedToClient) {
+                      return 'Client';
+                    } else if (isAssignedToUser) {
+                      return 'User';
+                    } else {
+                      return '-';
+                    }
+                  })()}
                 </div>
 
                 {/* Manage */}
@@ -1156,23 +1321,45 @@ export const ProjectsOverview = () => {
                   </button>
                 </div>
 
-                {/* Reports */}
-                <div>
-                  <button style={{
-                    color: "#2563eb",
-                    backgroundColor: "transparent",
-                    border: "none",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                    fontWeight: "600"
-                  }}>
-                    VIEW
-                  </button>
-                </div>
-
                 {/* Actions or Status */}
                 <div>
-                  {isClient ? (
+                  {user?.email === 'dhaneshwari.tosscss@gmail.com' ? (
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px"
+                    }}>
+                      <span style={{
+                        fontSize: "14px",
+                        fontWeight: "500",
+                        color: project.statusText === 'working on' ? "#10b981" : 
+                               project.statusText === 'annotated' ? "#f59e0b" : "#6b7280",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px"
+                      }}>
+                        <span style={{
+                          color: project.statusText === 'working on' ? "#10b981" : 
+                                 project.statusText === 'annotated' ? "#f59e0b" : "#6b7280"
+                        }}>●</span>
+                        {project.statusText === 'working on' ? 'Active' : 
+                         project.statusText === 'annotated' ? 'Annotated' : 'Completed'}
+                      </span>
+                      <button 
+                        onClick={(e) => handleActionsClick(project.id, e)}
+                        style={{
+                          backgroundColor: "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                          color: "#6b7280",
+                          fontSize: "16px",
+                          padding: "4px"
+                        }}
+                      >
+                        ⋯
+                      </button>
+                    </div>
+                  ) : isClient ? (
                     <span style={{
                       fontSize: "14px",
                       fontWeight: "500",
@@ -1580,30 +1767,6 @@ export const ProjectsOverview = () => {
                 }}>
                   Manage Users for "{selectedProjectTitleForAssign}"
                 </h3>
-                {/* Debug button - remove in production */}
-                <button
-                  onClick={() => {
-                    console.log('Clearing all assignment data...');
-                    Object.keys(localStorage).forEach(key => {
-                      if (key.startsWith('project_') && key.includes('_user_')) {
-                        console.log(`Removing: ${key}`);
-                        localStorage.removeItem(key);
-                      }
-                    });
-                    alert('Assignment data cleared!');
-                  }}
-                  style={{
-                    padding: "4px 8px",
-                    backgroundColor: "#f59e0b",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    fontSize: "10px",
-                    marginLeft: "10px"
-                  }}
-                >
-                  Clear Data
-                </button>
                 <button
                   onClick={closeAssignModal}
                   style={{

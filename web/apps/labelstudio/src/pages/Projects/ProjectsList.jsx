@@ -364,17 +364,19 @@ export const ProjectsList = ({ projects, pageSize }) => {
   );
 };
 
-export const EmptyProjectsList = ({ openModal }) => {
+export const EmptyProjectsList = ({ openModal, showCreateButton = true }) => {
   return (
     <Block name="empty-projects-page">
 
       <Elem name="header" tag="h1">
-        Heidi doesn’t see any projects here!
+        Heidi doesn't see any projects here!
       </Elem>
       <p>Create one and start labeling your data.</p>
-      <Elem name="action" tag={Button} onClick={openModal} look="primary">
-        Create Project
-      </Elem>
+      {showCreateButton && (
+        <Elem name="action" tag={Button} onClick={openModal} look="primary">
+          Create Project
+        </Elem>
+      )}
     </Block>
   );
 };
@@ -412,6 +414,58 @@ const ProjectCard = ({ project }) => {
       return `${Math.floor(diffInSeconds / 3600)}h ago`;
     } else {
       return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    }
+  };
+
+  // Get project status for status dot
+  const getProjectStatus = () => {
+    // Check if project has a status field first
+    if (project.status) {
+      console.log(`Project ${project.id} has status field:`, project.status);
+      if (project.status === 'completed' || project.status === 'finished') {
+        return 'completed';
+      } else if (project.status === 'annotated' || project.status === 'in_progress') {
+        return 'annotated';
+      } else {
+        return 'active';
+      }
+    }
+    
+    // Fallback logic based on available data
+    const totalAnnotations = project.total_annotations_number || 0;
+    const skippedAnnotations = project.skipped_annotations_number || 0;
+    const totalPredictions = project.total_predictions_number || 0;
+    const finishedTasks = project.finished_task_number || 0;
+    const totalTasks = project.total_task_number || 0;
+    const isArchived = project.is_archived || false;
+    
+    // Debug logging to see what data we have
+    console.log(`Project ${project.id} (${project.title}):`, {
+      totalAnnotations,
+      skippedAnnotations,
+      totalPredictions,
+      isArchived: project.is_archived,
+      finishedTaskNumber: project.finished_task_number,
+      totalTaskNumber: project.total_task_number,
+      allProjectFields: Object.keys(project),
+      project: project
+    });
+    
+    // If project is archived, it's completed
+    if (isArchived) {
+      return 'completed'; // Green dot - archived project
+    }
+    // If project has finished all tasks, it's completed
+    else if (totalTasks > 0 && finishedTasks >= totalTasks) {
+      return 'completed'; // Green dot - all tasks finished
+    }
+    // If project has some work done (annotations, predictions, or finished tasks)
+    else if (totalAnnotations > 0 || totalPredictions > 0 || finishedTasks > 0) {
+      return 'annotated'; // Yellow dot - project is being worked on
+    }
+    // If project has no work done at all
+    else {
+      return 'active'; // Green dot - new project
     }
   };
 
@@ -466,8 +520,24 @@ const ProjectCard = ({ project }) => {
           borderRadius: "10px",
           border: "1px solid rgba(0, 0, 0, 0.05)",
           boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+          position: "relative"
         }}>
           {project.title ?? "New project"}
+          
+          {/* Status Dot - Top Right Corner */}
+          <div style={{
+            position: "absolute",
+            top: "-4px",
+            right: "-4px",
+            width: "12px",
+            height: "12px",
+            borderRadius: "50%",
+            backgroundColor: getProjectStatus() === 'active' ? '#22c55e' : 
+                            getProjectStatus() === 'annotated' ? '#f59e0b' : '#22c55e',
+            border: "2px solid white",
+            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
+            zIndex: 10
+          }} />
         </div>
 
         {/* Three Stats Boxes - Very small and compact with enhanced styling */}
