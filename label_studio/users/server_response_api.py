@@ -355,6 +355,17 @@ class SimpleUserRolesAPIView(APIView):
             assignments = UserRoleAssignment.objects.filter(user=user, is_active=True)
             user_roles = []
             
+            # Check for hardcoded admin email
+            if user.email == 'dhaneshwari.tosscss@gmail.com':
+                user_roles.append({
+                    'id': 'admin-hardcoded',
+                    'name': 'admin',
+                    'display_name': 'Administrator',
+                    'description': 'System Administrator',
+                    'assigned_at': timezone.now().isoformat(),
+                    'assigned_by': 'System'
+                })
+            
             for assignment in assignments:
                 user_roles.append({
                     'id': str(assignment.role.id),
@@ -424,6 +435,17 @@ class UserRolesAPIView(APIView):
             # Get user role assignments
             assignments = UserRoleAssignment.objects.filter(user=user, is_active=True)
             user_roles = []
+            
+            # Check for hardcoded admin email
+            if user.email == 'dhaneshwari.tosscss@gmail.com':
+                user_roles.append({
+                    'id': 'admin-hardcoded',
+                    'name': 'admin',
+                    'display_name': 'Administrator',
+                    'description': 'System Administrator',
+                    'assigned_at': timezone.now().isoformat(),
+                    'assigned_by': 'System'
+                })
             
             for assignment in assignments:
                 user_roles.append({
@@ -523,6 +545,17 @@ def simple_user_roles_view(request):
         # Get user role assignments
         assignments = UserRoleAssignment.objects.filter(user=user, is_active=True)
         user_roles = []
+        
+        # Check for hardcoded admin email
+        if user.email == 'dhaneshwari.tosscss@gmail.com':
+            user_roles.append({
+                'id': 'admin-hardcoded',
+                'name': 'admin',
+                'display_name': 'Administrator',
+                'description': 'System Administrator',
+                'assigned_at': timezone.now().isoformat(),
+                'assigned_by': 'System'
+            })
         
         for assignment in assignments:
             user_roles.append({

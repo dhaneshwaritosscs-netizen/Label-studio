@@ -97,13 +97,9 @@ export const HomePage: Page = () => {
           count: assignedProjects.length
         };
       } else {
-        // For admin users, fetch only projects created by them
+        // For admin users, fetch all projects
         return api.callApi<{ results: APIProject[]; count: number }>("projects", {
-          params: { 
-            page_size: PROJECTS_TO_SHOW,
-            created_by: user?.id,
-            show_all: true
-          },
+          params: { page_size: PROJECTS_TO_SHOW },
         });
       }
     },

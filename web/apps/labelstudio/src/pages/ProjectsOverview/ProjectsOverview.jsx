@@ -44,20 +44,12 @@ export const ProjectsOverview = () => {
         setError(null);
         
         // Fetch projects based on user role
-        const requestParams = {
-          show_all: true,
-          page_size: 1000,
-          include: "id,title,created_by,created_at,is_published,task_number,total_annotations_number,finished_task_number"
-        };
-
-        // For admin users, fetch only projects created by them
-        if (isAdmin) {
-          requestParams.created_by = user.id;
-          console.log("Admin user detected, fetching projects created by:", user.id);
-        }
-
         const projectsResponse = await api.callApi("projects", {
-          params: requestParams
+          params: {
+            show_all: true, // Admin sees all projects including client projects
+            page_size: 1000,
+            include: "id,title,created_by,created_at,is_published,task_number,total_annotations_number,finished_task_number"
+          }
         });
 
         // Get list of projects that should be hidden for this user
@@ -73,19 +65,15 @@ export const ProjectsOverview = () => {
           const userProjectAssignments = JSON.parse(localStorage.getItem('userProjectAssignments') || '{}');
           const userAssignments = userProjectAssignments[user.id] || [];
 
-          // Filter projects based on user role
+          // For client users, include both created projects and assigned projects
           let filteredProjects = visibleProjects;
           if (isClient) {
-            // Client users see both created projects and assigned projects
             filteredProjects = visibleProjects.filter(project => 
               project.created_by?.id === user.id || 
               userAssignments.includes(project.id)
             );
             console.log(`Client ${user.email}: Found ${filteredProjects.length} projects (created + assigned)`);
             console.log(`User assignments:`, userAssignments);
-          } else if (isAdmin) {
-            // Admin users see only projects they created (already filtered by backend)
-            console.log(`Admin ${user.email}: Found ${filteredProjects.length} projects created by admin`);
           }
 
           // Get manual status changes from localStorage
@@ -863,9 +851,6 @@ export const ProjectsOverview = () => {
         
         // Show project if: created by user OR assigned to user
         return isProjectCreatedByUser || isProjectAssignedToUser;
-      } else if (isAdmin) {
-        // Admin users see only projects they created
-        return project.created_by?.id === user?.id;
       }
       return true;
     });

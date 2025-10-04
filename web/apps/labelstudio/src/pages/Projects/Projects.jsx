@@ -35,18 +35,38 @@ export const ProjectsPage = () => {
 
   const [modal, setModal] = React.useState(false);
 
-  // Check if user is admin or client
-  const isAdmin = hasRole('admin');
-  const isClient = !isAdmin; // If not admin, consider as client
+  // Check if user is the specific admin - more robust check
+  const userEmail = currentUser?.email?.toLowerCase()?.trim();
+  const adminEmail = 'dhaneshwari.tosscss@gmail.com'.toLowerCase().trim();
+  const isSpecificAdmin = userEmail === adminEmail;
   
-  // Check if user is the specific admin
-  const isSpecificAdmin = currentUser?.email === 'dhaneshwari.tosscss@gmail.com';
+  // Additional check - if currentUser is not loaded yet, check if we're on the right page
+  const isAdminByEmail = currentUser?.email === 'dhaneshwari.tosscss@gmail.com' || 
+                        userEmail === adminEmail ||
+                        (currentUser && currentUser.email && currentUser.email.includes('dhaneshwari.tosscss@gmail.com'));
+
+  // Check if user is admin or client
+  const isAdmin = hasRole('admin') || isSpecificAdmin || isAdminByEmail; // Multiple fallbacks
+  const isClient = !isAdmin; // If not admin, consider as client
 
   // Debug user roles
+  console.log("=== PROJECTS DEBUG START ===");
   console.log("User roles:", userRoles);
   console.log("Loading roles:", loadingRoles);
   console.log("Is admin:", isAdmin);
   console.log("Is client:", isClient);
+  console.log("Current user email:", currentUser?.email);
+  console.log("Is specific admin:", isSpecificAdmin);
+  console.log("Is admin by email:", isAdminByEmail);
+  console.log("Current user object:", currentUser);
+  console.log("hasRole('admin') result:", hasRole('admin'));
+  console.log("User email comparison:");
+  console.log("- User email:", currentUser?.email);
+  console.log("- Admin email:", 'dhaneshwari.tosscss@gmail.com');
+  console.log("- Match:", currentUser?.email === 'dhaneshwari.tosscss@gmail.com');
+  console.log("- Lowercase match:", userEmail === adminEmail);
+  console.log("- Final isAdmin result:", isAdmin);
+  console.log("=== PROJECTS DEBUG END ===");
 
   const openModal = () => setModal(true);
 
