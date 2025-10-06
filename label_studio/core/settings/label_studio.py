@@ -8,6 +8,9 @@ from core.utils.secret_key import generate_secret_key_if_missing
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8010",
     "http://127.0.0.1:8010",
+    "http://localhost:8083",
+    "http://127.0.0.1:8083",
+    "http://103.14.120.163:8083",
 ]
 
 # SECURITY WARNING: keep the secret key used in production secret!

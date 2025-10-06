@@ -9,6 +9,8 @@ from django.utils import timezone
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.utils.decorators import method_decorator
 import logging
 import json
 
@@ -21,6 +23,15 @@ class ServerResponseAPIView(APIView):
     Comprehensive API for handling server responses
     """
     permission_classes = [permissions.AllowAny]
+
+    def dispatch(self, request, *args, **kwargs):
+        response = super().dispatch(request, *args, **kwargs)
+        # Add CORS headers
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-CSRFToken'
+        response['Access-Control-Allow-Credentials'] = 'true'
+        return response
 
     def get(self, request):
         """
@@ -65,6 +76,12 @@ class ServerResponseAPIView(APIView):
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    def options(self, request, *args, **kwargs):
+        """
+        Handle preflight CORS requests
+        """
+        return Response(status=status.HTTP_200_OK)
+
     def _health_check(self):
         """Health check response"""
         return Response({
@@ -107,6 +124,15 @@ class RoleAssignmentResponseAPIView(APIView):
     Enhanced role assignment API with comprehensive response handling
     """
     permission_classes = [permissions.IsAuthenticated]
+
+    def dispatch(self, request, *args, **kwargs):
+        response = super().dispatch(request, *args, **kwargs)
+        # Add CORS headers
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-CSRFToken'
+        response['Access-Control-Allow-Credentials'] = 'true'
+        return response
 
     def post(self, request):
         """
@@ -477,6 +503,12 @@ class UserRolesAPIView(APIView):
                 'error': str(e),
                 'timestamp': timezone.now().isoformat()
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def options(self, request, *args, **kwargs):
+        """
+        Handle preflight CORS requests
+        """
+        return Response(status=status.HTTP_200_OK)
 
 
 class APIStatusView(APIView):
