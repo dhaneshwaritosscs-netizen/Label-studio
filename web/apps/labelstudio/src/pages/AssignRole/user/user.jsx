@@ -146,7 +146,8 @@ export const AssignRole = () => {
       console.log("Fetching roles for email:", userEmail);
       
       // Use direct fetch API to bypass any API provider issues
-      const response = await fetch(`http://localhost:8010/api/simple-user-roles/?email=${encodeURIComponent(userEmail)}`, {
+      const baseUrl = window.location.origin;
+      const response = await fetch(`${baseUrl}/api/simple-user-roles/?email=${encodeURIComponent(userEmail)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -336,7 +337,8 @@ export const AssignRole = () => {
       // First test server connection with direct fetch
       console.log("Testing server connection...");
       try {
-        const healthResponse = await fetch('http://localhost:8010/api/server-response/');
+        const baseUrl = window.location.origin;
+        const healthResponse = await fetch(`${baseUrl}/api/server-response/`);
         const healthData = await healthResponse.json();
         console.log("Health check response:", healthData);
       } catch (healthErr) {
@@ -346,7 +348,8 @@ export const AssignRole = () => {
       // Use direct fetch API to bypass any API provider issues
       console.log("Making direct API call...");
       
-      const response = await fetch('http://localhost:8010/api/role-assignment-enhanced/', {
+      const baseUrl = window.location.origin;
+      const response = await fetch(`${baseUrl}/api/role-assignment-enhanced/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

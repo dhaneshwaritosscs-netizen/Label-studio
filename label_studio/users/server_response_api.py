@@ -24,15 +24,6 @@ class ServerResponseAPIView(APIView):
     """
     permission_classes = [permissions.AllowAny]
 
-    def dispatch(self, request, *args, **kwargs):
-        response = super().dispatch(request, *args, **kwargs)
-        # Add CORS headers
-        response['Access-Control-Allow-Origin'] = '*'
-        response['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-        response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-CSRFToken'
-        response['Access-Control-Allow-Credentials'] = 'true'
-        return response
-
     def get(self, request):
         """
         Health check endpoint
@@ -113,7 +104,7 @@ class ServerResponseAPIView(APIView):
                 'framework': 'Django',
                 'version': '3.1.7',
                 'database': 'SQLite',
-                'port': '8010',
+                'port': '8083',
                 'environment': 'development'
             }
         }, status=status.HTTP_200_OK)
@@ -124,15 +115,6 @@ class RoleAssignmentResponseAPIView(APIView):
     Enhanced role assignment API with comprehensive response handling
     """
     permission_classes = [permissions.IsAuthenticated]
-
-    def dispatch(self, request, *args, **kwargs):
-        response = super().dispatch(request, *args, **kwargs)
-        # Add CORS headers
-        response['Access-Control-Allow-Origin'] = '*'
-        response['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-        response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-CSRFToken'
-        response['Access-Control-Allow-Credentials'] = 'true'
-        return response
 
     def post(self, request):
         """

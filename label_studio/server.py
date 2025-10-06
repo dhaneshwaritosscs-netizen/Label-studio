@@ -422,12 +422,12 @@ def main():
 
         # internal port and internal host for server start
         internal_host = input_args.internal_host or config.get('internal_host', '0.0.0.0')  # nosec
-        internal_port = input_args.port or get_env('PORT') or config.get('port', 8080)
+        internal_port = input_args.port or get_env('PORT') or config.get('port', 8083)
         try:
             internal_port = int(internal_port)
         except ValueError as e:
-            logger.warning(f"Can't parse PORT '{internal_port}': {e}; default value 8080 will be used")
-            internal_port = 8080
+            logger.warning(f"Can't parse PORT '{internal_port}': {e}; default value 8083 will be used")
+            internal_port = 8083
 
         internal_port = _get_free_port(internal_port, input_args.debug)
 

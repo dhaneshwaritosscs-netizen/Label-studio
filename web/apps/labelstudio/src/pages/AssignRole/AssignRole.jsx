@@ -396,7 +396,8 @@ export const AssignRole = () => {
       for (const { user: userData } of usersList) {
         try {
           // Fetch user roles (same API as Organization page)
-          const rolesResponse = await fetch(`http://localhost:8010/api/simple-user-roles/?email=${encodeURIComponent(userData.email)}`, {
+          const baseUrl = window.location.origin;
+          const rolesResponse = await fetch(`${baseUrl}/api/simple-user-roles/?email=${encodeURIComponent(userData.email)}`, {
             method: 'GET',
         headers: {
           'Content-Type': 'application/json',

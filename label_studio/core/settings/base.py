@@ -97,7 +97,7 @@ if HOSTNAME:
 
         # for django url resolver
         if HOSTNAME:
-            # http[s]://domain.com:8080/script_name => /script_name
+            # http[s]://domain.com:8083/script_name => /script_name
             pattern = re.compile(r'^http[s]?:\/\/([^:\/\s]+(:\d*)?)(.*)?')
             match = pattern.match(HOSTNAME)
             FORCE_SCRIPT_NAME = match.group(3)
@@ -114,7 +114,7 @@ if DOMAIN_FROM_REQUEST:
     if HOSTNAME and not HOSTNAME.startswith('/'):
         raise ImproperlyConfigured('LABEL_STUDIO_HOST must be a subpath if DOMAIN_FROM_REQUEST is True')
 
-INTERNAL_PORT = '8080'
+INTERNAL_PORT = '8083'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = get_bool_env('DEBUG', True)
